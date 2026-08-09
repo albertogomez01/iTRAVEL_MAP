@@ -283,11 +283,31 @@ export default function App() {
     }
   };
 
+  const handleAskCopilot = (topic: string) => {
+    setIsChatOpen(true);
+    setIsItineraryOpen(false);
+    setInputValue(`¿Me podrías dar más detalles, precios u opiniones sobre ${topic}?`);
+  };
+
   const selectedOption = tripPlan?.options.find(o => o.id === selectedOptionId) || null;
 
   return (
     <div className="relative h-screen w-full bg-slate-950 overflow-hidden font-sans select-none">
       
+      {/* FLOATING NON-INTRUSIVE AI THINKING INDICATOR */}
+      {(isLoading || isUpdatingItinerary) && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[500] bg-slate-900/95 text-white backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-brand-500/40 shadow-2xl flex items-center gap-3 animate-fade-in">
+          <div className="relative flex items-center justify-center">
+            <Loader2 size={18} className="animate-spin text-brand-400" />
+            <Sparkles size={10} className="absolute text-emerald-400" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs font-bold text-white tracking-wide">Copiloto IA en acción...</span>
+            <span className="text-[10px] text-slate-300">Buscando información en tiempo real y organizando tu viaje</span>
+          </div>
+        </div>
+      )}
+
       {/* 1. PERMANENT INTERACTIVE MAP BACKGROUND */}
       <div className="absolute inset-0 z-0">
         <MapView option={selectedOption} />
@@ -401,7 +421,7 @@ export default function App() {
                 <div className="w-7 h-7 rounded-full bg-brand-500/20 flex items-center justify-center text-brand-400 shrink-0">
                   <Loader2 size={16} className="animate-spin" />
                 </div>
-                <div className="text-xs text-slate-300 mt-1">Pensando y consultando rutas en vivo...</div>
+                <div className="text-xs text-slate-300 mt-1">Buscando las mejores ofertas y procesando respuesta...</div>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -431,6 +451,7 @@ export default function App() {
               isUpdating={isUpdatingItinerary} 
               selectedOptionId={selectedOptionId}
               onSelectOption={setSelectedOptionId}
+              onAskCopilot={handleAskCopilot}
             />
           </div>
         </div>

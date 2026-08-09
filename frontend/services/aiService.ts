@@ -337,33 +337,4 @@ export const streamAdkQuery = async (userId: string, sessionId: string, message:
 };
 
 // ============================================================================
-// 3. IMAGE GENERATION (Logo)
-// ============================================================================
-
-export const generateAppLogo = async (): Promise<string | null> => {
-  if (!ai) {
-    console.error("IA no inicializada.");
-    return null;
-  }
-  
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
-      contents: '3D modern mobile app icon logo for a travel application. In the center, a translucent dark blue sphere of a globe with glowing cyan grid lines (latitude and longitude) and subtle continent silhouettes. Overlaid prominently in the foreground are stylized 3D letters "iT" with a vibrant coral-to-orange gradient and a soft neon glow. A subtle dashed cyan flight path orbits the globe with a small plane. Deep dark navy blue background, soft studio lighting, Octane render, iOS app icon style, clean, 8k resolution --ar 1:1',
-      config: {
-        responseModalities: [Modality.IMAGE],
-      },
-    });
-    
-    const parts = response.candidates?.[0]?.content?.parts || [];
-    for (const part of parts) {
-      if (part.inlineData) {
-        return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error("Error al generar el logo:", error);
-    return null;
-  }
-};
+// ----------------------------------------------------------------------------

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Moon, Sun, Wallet, Activity, Image as ImageIcon, Loader2, Calendar, Banknote, MapPin, X, Check, RotateCcw, Bookmark, Trash2, Navigation } from 'lucide-react';
+import { Settings, Moon, Sun, Wallet, Activity, Loader2, Calendar, Banknote, MapPin, X, Check, RotateCcw, Bookmark, Trash2, Navigation } from 'lucide-react';
 import { UserPreferences } from '../types';
-import { generateAppLogo } from '../services/aiService';
 import { CityAutocompleteInput } from './CityAutocompleteInput';
 
 import { loginWithGoogle, logoutUser } from '../services/firebase';
@@ -47,8 +46,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteTrip,
   onSaveCurrentTrip
 }) => {
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [showUndoConfirmModal, setShowUndoConfirmModal] = useState(false);
   const [customKeyInput, setCustomKeyInput] = useState(getApiKey());
@@ -62,17 +59,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   useEffect(() => {
     setDraftPrefs({ ...preferences });
   }, [preferences]);
-
-  const handleGenerateLogo = async () => {
-    setIsGeneratingLogo(true);
-    const url = await generateAppLogo();
-    if (url) {
-      setLogoUrl(url);
-    } else {
-      alert("No se pudo generar el logo. Verifica tu conexión o API Key.");
-    }
-    setIsGeneratingLogo(false);
-  };
 
   const handleSaveApiKey = () => {
     setCustomApiKey(customKeyInput.trim());
@@ -108,27 +94,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* App Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
-            {logoUrl ? (
-              <img src={logoUrl} alt="iTRAVEL_MAP Logo" className="w-8 h-8 rounded-lg object-cover shadow-md" />
-            ) : (
-              <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center shadow-md">
-                <Settings size={18} className="text-white" />
-              </div>
-            )}
+            <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center shadow-md font-black text-sm">
+              iT
+            </div>
             <h1 className="font-bold tracking-wide">iTRAVEL_MAP</h1>
           </div>
           
           <div className="flex items-center gap-1">
-            {!logoUrl && (
-              <button 
-                onClick={handleGenerateLogo} 
-                disabled={isGeneratingLogo}
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
-                title="Generar Logo con IA"
-              >
-                {isGeneratingLogo ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
-              </button>
-            )}
             <button
               onClick={() => setShowKeyModal(true)}
               className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
