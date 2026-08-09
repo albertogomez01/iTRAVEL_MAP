@@ -22,8 +22,8 @@ export const isFirebaseConfigured = (): boolean => {
 };
 
 const app = !getApps().length && isFirebaseConfigured() ? initializeApp(firebaseConfig) : (getApps().length ? getApp() : null);
-export const auth = app ? getAuth(app) : null;
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 export const loginWithGoogle = async (): Promise<User | null> => {
   if (!auth) {

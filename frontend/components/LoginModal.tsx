@@ -20,17 +20,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isOpen }
     setIsLoadingGoogle(true);
     setErrorMsg(null);
     try {
-      if (!isFirebaseConfigured()) {
-        // Fallback simulación si Firebase no tiene las variables en Vercel
-        const simulatedName = "Usuario Google";
-        onLoginSuccess({
-          displayName: simulatedName,
-          email: "usuario.google@itravel.com",
-          photoURL: "https://lh3.googleusercontent.com/a/default-user"
-        });
-        setIsLoadingGoogle(false);
-        return;
-      }
       const u = await loginWithGoogle();
       if (u) {
         onLoginSuccess({
@@ -41,7 +30,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isOpen }
       }
     } catch (err: any) {
       console.error("Error al iniciar sesión con Google:", err);
-      setErrorMsg(err.message || "No se pudo iniciar sesión con Google.");
+      setErrorMsg(err.message || "No se pudo conectar con Google Auth. Puedes usar el formulario de Nombre y Apellidos.");
     } finally {
       setIsLoadingGoogle(false);
     }
