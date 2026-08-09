@@ -49,6 +49,26 @@
                 stroke-dashoffset: -1000;
             }
         }
+
+        /* Logo Animations */
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-8px) scale(1.04); }
+        }
+        @keyframes logoPulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(20, 184, 166, 0.4), 0 0 40px rgba(13, 148, 136, 0.2); }
+            50% { box-shadow: 0 0 45px rgba(20, 184, 166, 0.8), 0 0 80px rgba(13, 148, 136, 0.5); }
+        }
+        @keyframes orbitSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animated-logo-glow {
+            animation: logoPulseGlow 3s ease-in-out infinite, logoFloat 4s ease-in-out infinite;
+        }
+        .orbit-ring {
+            animation: orbitSpin 10s linear infinite;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 h-screen overflow-hidden flex flex-col">

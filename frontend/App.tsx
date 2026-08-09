@@ -8,6 +8,7 @@ import { Sidebar, SavedTrip } from './components/Sidebar';
 import { MapView } from './components/MapView';
 import { LoginModal } from './components/LoginModal';
 import { OnboardingGuideModal } from './components/OnboardingGuideModal';
+import { AppSplashScreen } from './components/AppSplashScreen';
 
 import { User } from 'firebase/auth';
 import { subscribeToAuth } from './services/firebase';
@@ -19,6 +20,7 @@ interface UserSession {
 }
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [customUser, setCustomUser] = useState<UserSession | null>(() => {
     try {
@@ -526,6 +528,11 @@ export default function App() {
         isOpen={isOnboardingOpen} 
         onClose={handleCloseOnboarding} 
       />
+
+      {/* 10. ANIMATED ENTRY SPLASH SCREEN */}
+      {showSplash && (
+        <AppSplashScreen onFinish={() => setShowSplash(false)} />
+      )}
 
     </div>
   );

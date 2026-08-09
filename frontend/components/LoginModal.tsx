@@ -65,7 +65,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isOpen }
         
         {/* Top Header Badge */}
         <div className="flex flex-col items-center text-center mb-6">
-          <img src="/logo.png" alt="iTRAVEL_MAP Logo" className="w-16 h-16 rounded-2xl object-cover shadow-2xl shadow-brand-500/40 mb-3 border-2 border-brand-400/40 animate-pulse-subtle" />
+          <img src="/logo.png" alt="iTRAVEL_MAP Logo" className="w-16 h-16 rounded-2xl object-cover animated-logo-glow mb-3 border-2 border-brand-400/50" />
           <h1 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
             iTRAVEL_MAP
             <span className="text-xs bg-brand-500/20 text-brand-400 font-semibold px-2 py-0.5 rounded-full border border-brand-500/30">AI Copilot</span>
