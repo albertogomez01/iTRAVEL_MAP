@@ -61,7 +61,16 @@ Capacidades y Reglas Clave:
 Tono: Profesional, inspirador, muy organizado y conciso. Usa markdown para facilitar la lectura.
 `;
 
-let activeModel = 'gemini-1.5-flash';
+const CANDIDATE_MODELS = [
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-flash-002',
+  'gemini-1.5-flash-001',
+  'gemini-2.0-flash-exp',
+  'gemini-2.0-flash',
+  'gemini-2.5-flash'
+];
+
+let activeModelIndex = 0;
 let lastPreferences: UserPreferences | null = null;
 
 export const initChat = (preferences: UserPreferences) => {
@@ -85,8 +94,11 @@ export const initChat = (preferences: UserPreferences) => {
   - Presupuesto Máximo Total: ${preferences.maxBudget}€
   - Ritmo de Viaje: ${preferences.pace}${datesStr}`;
 
+  const currentModel = CANDIDATE_MODELS[activeModelIndex] || CANDIDATE_MODELS[0];
+  console.log(`Inicializando chat con modelo: ${currentModel}`);
+
   chatSession = ai.chats.create({
-    model: activeModel,
+    model: currentModel,
     config: {
       systemInstruction: `${SYSTEM_INSTRUCTION}\n\n${prefString}`,
       tools: [{ googleSearch: {} }], // Búsqueda en vivo activada
@@ -98,26 +110,27 @@ export const initChat = (preferences: UserPreferences) => {
 export const sendMessageToAgent = async (message: string) => {
   if (!ai || !chatSession) throw new Error("Sesión de chat no inicializada");
   
-  try {
-    const response = await chatSession.sendMessage({ message });
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-    
-    return {
-      text: response.text,
-      groundingChunks: groundingChunks.map((chunk: any) => ({
-        web: chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : undefined
-      })).filter((c: any) => c.web !== undefined)
-    };
-  } catch (error: any) {
-    const errMsg = String(error?.message || error);
-    if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('404') || errMsg.includes('limit: 0')) {
-      console.warn("Límite o fallo detectado en el modelo actual. Probando modelo de respaldo (gemini-1.5-flash)...");
-      activeModel = 'gemini-1.5-flash';
+  for (let attempt = 0; attempt < CANDIDATE_MODELS.length; attempt++) {
+    try {
+      const response = await chatSession.sendMessage({ message });
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      
+      return {
+        text: response.text,
+        groundingChunks: groundingChunks.map((chunk: any) => ({
+          web: chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : undefined
+        })).filter((c: any) => c.web !== undefined)
+      };
+    } catch (error: any) {
+      const errMsg = String(error?.message || error);
+      console.warn(`Error con modelo ${CANDIDATE_MODELS[activeModelIndex]} (${errMsg}). Probando siguiente modelo...`);
+      
+      activeModelIndex = (activeModelIndex + 1) % CANDIDATE_MODELS.length;
       if (lastPreferences) {
         initChat(lastPreferences);
       } else {
         chatSession = ai.chats.create({
-          model: 'gemini-1.5-flash',
+          model: CANDIDATE_MODELS[activeModelIndex],
           config: {
             systemInstruction: SYSTEM_INSTRUCTION,
             tools: [{ googleSearch: {} }],
@@ -125,17 +138,15 @@ export const sendMessageToAgent = async (message: string) => {
           },
         });
       }
-      const response = await chatSession.sendMessage({ message });
-      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-      return {
-        text: response.text,
-        groundingChunks: groundingChunks.map((chunk: any) => ({
-          web: chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : undefined
-        })).filter((c: any) => c.web !== undefined)
-      };
+      
+      // If we cycled through all models, throw the last error
+      if (attempt === CANDIDATE_MODELS.length - 1) {
+        throw error;
+      }
     }
-    throw error;
   }
+
+  throw new Error("No se pudo obtener respuesta de ningún modelo de Gemini disponible.");
 };
 
 // Schema for the Orchestrator to extract structured data
@@ -244,7 +255,7 @@ export const extractItineraryState = async (chatHistoryText: string, preferences
     : '';
   const prefContext = `Preferencias: Trenes Nocturnos: ${preferences.preferNightTrains}, Presupuesto Máx: ${preferences.maxBudget}€, Ritmo: ${preferences.pace}${datesContext}${originContext}.`;
 
-  const modelsToTry = ['gemini-1.5-flash', activeModel, 'gemini-2.5-flash'];
+  const modelsToTry = CANDIDATE_MODELS;
   for (const model of modelsToTry) {
     try {
       const response = await ai.models.generateContent({
