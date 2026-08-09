@@ -61,7 +61,7 @@ Capacidades y Reglas Clave:
 Tono: Profesional, inspirador, muy organizado y conciso. Usa markdown para facilitar la lectura.
 `;
 
-let activeModel = 'gemini-2.0-flash';
+let activeModel = 'gemini-1.5-flash';
 let lastPreferences: UserPreferences | null = null;
 
 export const initChat = (preferences: UserPreferences) => {
@@ -244,7 +244,7 @@ export const extractItineraryState = async (chatHistoryText: string, preferences
     : '';
   const prefContext = `Preferencias: Trenes Nocturnos: ${preferences.preferNightTrains}, Presupuesto Máx: ${preferences.maxBudget}€, Ritmo: ${preferences.pace}${datesContext}${originContext}.`;
 
-  const modelsToTry = [activeModel, 'gemini-1.5-flash', 'gemini-2.5-flash'];
+  const modelsToTry = ['gemini-1.5-flash', activeModel, 'gemini-2.5-flash'];
   for (const model of modelsToTry) {
     try {
       const response = await ai.models.generateContent({
