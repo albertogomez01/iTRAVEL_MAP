@@ -93,10 +93,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className={`fixed inset-y-0 left-0 z-50 w-80 md:w-72 bg-slate-900 text-slate-300 flex flex-col h-full border-r border-slate-800 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpenMobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}`}>
         {/* App Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between text-white">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center shadow-md font-black text-sm">
-              iT
-            </div>
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="iTRAVEL_MAP Logo" className="w-8 h-8 rounded-xl object-cover shadow-lg border border-teal-500/30" />
             <h1 className="font-bold tracking-wide">iTRAVEL_MAP</h1>
           </div>
           

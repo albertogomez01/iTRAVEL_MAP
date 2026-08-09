@@ -335,10 +335,11 @@ export default function App() {
       {/* 2. TOP-LEFT HAMBURGER MENU BUTTON */}
       <button 
         onClick={() => setIsMobileSidebarOpen(true)}
-        className="fixed top-4 left-4 z-40 bg-slate-900/90 text-white p-2.5 px-3.5 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-2 hover:bg-slate-800 transition-all backdrop-blur-md active:scale-95 cursor-pointer"
+        className="fixed top-4 left-4 z-40 bg-slate-900/90 text-white p-2 px-3 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-2 hover:bg-slate-800 transition-all backdrop-blur-md active:scale-95 cursor-pointer"
         title="Abrir ajustes de viaje y menú"
       >
         <Menu size={20} className="text-brand-400" />
+        <img src="/logo.png" alt="Logo" className="w-5 h-5 rounded-md object-cover border border-teal-500/40" />
         <span className="font-bold text-xs tracking-wide">iTRAVEL_MAP</span>
       </button>
 
