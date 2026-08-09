@@ -6,12 +6,36 @@ import { ChatMessage } from './components/ChatMessage';
 import { ItineraryView } from './components/ItineraryView';
 import { Sidebar } from './components/Sidebar';
 import { MapView } from './components/MapView';
+import { LoginModal } from './components/LoginModal';
 
 import { User } from 'firebase/auth';
 import { subscribeToAuth } from './services/firebase';
 
+interface UserSession {
+  displayName: string;
+  email: string;
+  photoURL?: string;
+}
+
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [customUser, setCustomUser] = useState<UserSession | null>(() => {
+    try {
+      const saved = localStorage.getItem('itravel_user_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const activeUser = firebaseUser ? {
+    displayName: firebaseUser.displayName,
+    email: firebaseUser.email,
+    photoURL: firebaseUser.photoURL || undefined
+  } : customUser;
+
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(!activeUser);
+
   const [userId] = useState(() => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [useAdk, setUseAdk] = useState(false);
@@ -22,10 +46,31 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = subscribeToAuth((currentUser) => {
-      setUser(currentUser);
+      setFirebaseUser(currentUser);
+      if (currentUser) {
+        setIsLoginModalOpen(false);
+      }
     });
     return () => unsubscribe();
   }, []);
+
+  const handleLoginSuccess = (userData: UserSession) => {
+    setCustomUser(userData);
+    try {
+      localStorage.setItem('itravel_user_session', JSON.stringify(userData));
+    } catch (e) {
+      console.warn("No se pudo guardar la sesión local:", e);
+    }
+    setIsLoginModalOpen(false);
+  };
+
+  const handleLogout = () => {
+    setCustomUser(null);
+    try {
+      localStorage.removeItem('itravel_user_session');
+    } catch (e) {}
+    setIsLoginModalOpen(true);
+  };
   
   const [isInitialized, setIsInitialized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -221,11 +266,13 @@ export default function App() {
         <Sidebar 
           preferences={preferences} 
           setPreferences={setPreferences} 
-          user={user} 
+          user={activeUser} 
           isOpenMobile={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          onLogout={handleLogout}
+          onOpenLoginModal={() => setIsLoginModalOpen(true)}
         />
-        
+
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden w-full relative">
           
           {/* Chat Panel */}
@@ -334,6 +381,12 @@ export default function App() {
           )}
         </button>
       </div>
+
+      {/* Professional Web App Welcome / Login Modal */}
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onLoginSuccess={handleLoginSuccess} 
+      />
 
     </div>
   );
