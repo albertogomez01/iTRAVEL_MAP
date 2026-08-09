@@ -7,6 +7,7 @@ import { ItineraryView } from './components/ItineraryView';
 import { Sidebar, SavedTrip } from './components/Sidebar';
 import { MapView } from './components/MapView';
 import { LoginModal } from './components/LoginModal';
+import { OnboardingGuideModal } from './components/OnboardingGuideModal';
 
 import { User } from 'firebase/auth';
 import { subscribeToAuth } from './services/firebase';
@@ -35,9 +36,27 @@ export default function App() {
   } : customUser;
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(!activeUser);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [userId] = useState(() => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [useAdk, setUseAdk] = useState(false);
+
+  // Trigger Onboarding Guide once when activeUser exists and hasn't seen it yet
+  useEffect(() => {
+    if (activeUser) {
+      const hasSeen = localStorage.getItem('itravel_guide_seen');
+      if (!hasSeen) {
+        setIsOnboardingOpen(true);
+      }
+    }
+  }, [activeUser]);
+
+  const handleCloseOnboarding = () => {
+    setIsOnboardingOpen(false);
+    try {
+      localStorage.setItem('itravel_guide_seen', 'true');
+    } catch (e) {}
+  };
 
   // Floating Overlays & Sidebar Navigation State
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -452,6 +471,10 @@ export default function App() {
               selectedOptionId={selectedOptionId}
               onSelectOption={setSelectedOptionId}
               onAskCopilot={handleAskCopilot}
+              savedTrips={savedTrips}
+              onLoadTrip={handleLoadTrip}
+              onDeleteTrip={handleDeleteTrip}
+              onSaveCurrentTrip={handleSaveCurrentTrip}
             />
           </div>
         </div>
@@ -495,6 +518,12 @@ export default function App() {
       <LoginModal 
         isOpen={isLoginModalOpen} 
         onLoginSuccess={handleLoginSuccess} 
+      />
+
+      {/* 9. ONBOARDING WELCOME GUIDE MODAL (SHOWN ONLY ONCE) */}
+      <OnboardingGuideModal 
+        isOpen={isOnboardingOpen} 
+        onClose={handleCloseOnboarding} 
       />
 
     </div>

@@ -158,26 +158,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Tab Selector: Config / Mis Viajes */}
-        <div className="flex border-b border-slate-800 bg-slate-950/20">
-          <button
-            onClick={() => setActiveTab('config')}
-            className={`flex-1 py-2.5 text-xs font-semibold text-center border-b-2 transition-colors ${activeTab === 'config' ? 'border-brand-500 text-white bg-slate-800/40' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
-          >
-            Ajustes de Viaje
-          </button>
-          <button
-            onClick={() => setActiveTab('saved')}
-            className={`flex-1 py-2.5 text-xs font-semibold text-center border-b-2 transition-colors flex items-center justify-center gap-1.5 ${activeTab === 'saved' ? 'border-brand-500 text-white bg-slate-800/40' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
-          >
-            <Bookmark size={13} />
-            <span>Mis Viajes ({savedTrips.length})</span>
-          </button>
-        </div>
-
-        {/* TAB 1: Configuración de Datos de Viaje */}
-        {activeTab === 'config' ? (
-          <div className="p-4 flex-1 overflow-y-auto space-y-5">
+        {/* Configuración de Datos de Viaje */}
+        <div className="p-4 flex-1 overflow-y-auto space-y-5">
             
             {/* Origen del Viaje con Autocompletado */}
             <div>
@@ -327,62 +309,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
           </div>
-        ) : (
-          /* TAB 2: Mis Viajes Guardados */
-          <div className="p-4 flex-1 overflow-y-auto space-y-3">
-            {onSaveCurrentTrip && (
-              <button
-                onClick={onSaveCurrentTrip}
-                className="w-full py-2.5 px-3 bg-brand-600/20 hover:bg-brand-600/30 border border-brand-500/40 text-brand-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all mb-4"
-              >
-                <Bookmark size={14} />
-                <span>Guardar Viaje Actual</span>
-              </button>
-            )}
-
-            {savedTrips.length === 0 ? (
-              <div className="text-center py-10 text-slate-500 text-xs">
-                <Bookmark size={32} className="mx-auto mb-2 opacity-30" />
-                <p>Aún no tienes viajes guardados.</p>
-                <p className="text-[11px] text-slate-600 mt-1">Planifica una ruta y guárdala aquí para retomarla más tarde.</p>
-              </div>
-            ) : (
-              savedTrips.map((trip) => (
-                <div 
-                  key={trip.id}
-                  className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-3 hover:border-brand-500/50 transition-all flex items-center justify-between group"
-                >
-                  <div 
-                    className="flex-1 cursor-pointer overflow-hidden"
-                    onClick={() => {
-                      if (onLoadTrip) onLoadTrip(trip);
-                      if (onCloseMobile) onCloseMobile();
-                    }}
-                  >
-                    <h4 className="text-xs font-bold text-white truncate flex items-center gap-1.5">
-                      <Navigation size={12} className="text-brand-400" />
-                      {trip.title}
-                    </h4>
-                    <p className="text-[10px] text-slate-400 mt-0.5 truncate">
-                      {trip.origin} ➔ {trip.destination || 'Varias ciudades'}
-                    </p>
-                    <span className="text-[9px] text-slate-500 block mt-1">{trip.dateCreated}</span>
-                  </div>
-
-                  {onDeleteTrip && (
-                    <button
-                      onClick={() => onDeleteTrip(trip.id)}
-                      className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-700 rounded-lg transition-colors ml-2"
-                      title="Eliminar viaje"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        )}
 
         <div className="p-3 border-t border-slate-800 text-[11px] text-slate-500 text-center">
           Desarrollado con Google Gemini 3.6 Flash
