@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Moon, Sun, Wallet, Activity, Image as ImageIcon, Loader2, Calendar, Banknote, MapPin } from 'lucide-react';
+import { Settings, Moon, Sun, Wallet, Activity, Image as ImageIcon, Loader2, Calendar, Banknote, MapPin, X } from 'lucide-react';
 import { UserPreferences } from '../types';
 import { generateAppLogo } from '../services/aiService';
 
@@ -11,9 +11,11 @@ interface SidebarProps {
   preferences: UserPreferences;
   setPreferences: React.Dispatch<React.SetStateAction<UserPreferences>>;
   user: User | null;
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ preferences, setPreferences, user }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ preferences, setPreferences, user, isOpenMobile = false, onCloseMobile }) => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   const [showKeyModal, setShowKeyModal] = useState(false);
@@ -37,40 +39,58 @@ export const Sidebar: React.FC<SidebarProps> = ({ preferences, setPreferences, u
   };
 
   return (
-    <div className="w-64 bg-slate-900 text-slate-300 flex flex-col h-full border-r border-slate-800">
-      {/* App Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between text-white">
-        <div className="flex items-center gap-2">
-          {logoUrl ? (
-            <img src={logoUrl} alt="iTRAVEL_MAP Logo" className="w-8 h-8 rounded-lg object-cover shadow-md" />
-          ) : (
-            <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center shadow-md">
-              <Settings size={18} className="text-white" />
-            </div>
-          )}
-          <h1 className="font-bold tracking-wide">iTRAVEL_MAP</h1>
-        </div>
-        
-        <div className="flex items-center gap-1">
-          {!logoUrl && (
-            <button 
-              onClick={handleGenerateLogo} 
-              disabled={isGeneratingLogo}
+    <>
+      {/* Mobile Backdrop */}
+      {isOpenMobile && (
+        <div 
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-40 md:hidden"
+          onClick={onCloseMobile}
+        />
+      )}
+
+      <div className={`fixed inset-y-0 left-0 z-50 w-72 md:w-64 bg-slate-900 text-slate-300 flex flex-col h-full border-r border-slate-800 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpenMobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}`}>
+        {/* App Header */}
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between text-white">
+          <div className="flex items-center gap-2">
+            {logoUrl ? (
+              <img src={logoUrl} alt="iTRAVEL_MAP Logo" className="w-8 h-8 rounded-lg object-cover shadow-md" />
+            ) : (
+              <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center shadow-md">
+                <Settings size={18} className="text-white" />
+              </div>
+            )}
+            <h1 className="font-bold tracking-wide">iTRAVEL_MAP</h1>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            {!logoUrl && (
+              <button 
+                onClick={handleGenerateLogo} 
+                disabled={isGeneratingLogo}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+                title="Generar Logo con IA"
+              >
+                {isGeneratingLogo ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
+              </button>
+            )}
+            <button
+              onClick={() => setShowKeyModal(true)}
               className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
-              title="Generar Logo con IA (Gemini 3.1 Flash Image)"
+              title="Configurar API Key de Gemini"
             >
-              {isGeneratingLogo ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
+              <Settings size={16} />
             </button>
-          )}
-          <button
-            onClick={() => setShowKeyModal(true)}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
-            title="Configurar API Key de Gemini"
-          >
-            <Settings size={16} />
-          </button>
+            {onCloseMobile && (
+              <button
+                onClick={onCloseMobile}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors md:hidden ml-1"
+                title="Cerrar menú"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Profile & Google Auth Section */}
       <div className="p-4 border-b border-slate-800 bg-slate-950/40">
@@ -286,5 +306,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ preferences, setPreferences, u
         </div>
       )}
     </div>
-  );
+  </>
+);
 };
