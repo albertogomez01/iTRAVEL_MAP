@@ -30,7 +30,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isOpen }
       }
     } catch (err: any) {
       console.error("Error al iniciar sesión con Google:", err);
-      setErrorMsg(err.message || "No se pudo conectar con Google Auth. Puedes usar el formulario de Nombre y Apellidos.");
+      if (err?.message?.includes("Firebase no está configurado")) {
+        setErrorMsg("⚠️ Google Auth (Firebase) no tiene las variables configuradas en Vercel aún. Puedes usar el formulario de abajo (Nombre y Apellidos) para entrar al instante.");
+      } else {
+        setErrorMsg(err.message || "No se pudo conectar con Google Auth. Puedes usar el formulario de Nombre y Apellidos.");
+      }
     } finally {
       setIsLoadingGoogle(false);
     }
