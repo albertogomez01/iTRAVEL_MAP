@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Loader2, Link as LinkIcon, Menu, MessageSquare, Map as MapIcon, Calendar } from 'lucide-react';
+import { Send, Loader2, Link as LinkIcon, Menu, MessageSquare, Map as MapIcon, Calendar, ChevronDown, Bookmark, Sparkles, X } from 'lucide-react';
 import { Message, TripPlan, UserPreferences } from './types';
 import { initChat, sendMessageToAgent, extractItineraryState, isAdkConfigured, initAdkSession, streamAdkQuery } from './services/aiService';
 import { ChatMessage } from './components/ChatMessage';
 import { ItineraryView } from './components/ItineraryView';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, SavedTrip } from './components/Sidebar';
 import { MapView } from './components/MapView';
 import { LoginModal } from './components/LoginModal';
 
@@ -35,14 +35,24 @@ export default function App() {
   } : customUser;
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(!activeUser);
-
   const [userId] = useState(() => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [useAdk, setUseAdk] = useState(false);
 
-  // Responsive mobile states
-  const [mobileTab, setMobileTab] = useState<'chat' | 'map' | 'itinerary'>('chat');
+  // Floating Overlays & Sidebar Navigation State
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isItineraryOpen, setIsItineraryOpen] = useState(false);
+
+  // Saved Trips state
+  const [savedTrips, setSavedTrips] = useState<SavedTrip[]>(() => {
+    try {
+      const saved = localStorage.getItem('itravel_saved_trips');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   useEffect(() => {
     const unsubscribe = subscribeToAuth((currentUser) => {
@@ -71,13 +81,12 @@ export default function App() {
     } catch (e) {}
     setIsLoginModalOpen(true);
   };
-  
+
   const [isInitialized, setIsInitialized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  // Nuevos estados para manejar las 3 opciones
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isUpdatingItinerary, setIsUpdatingItinerary] = useState(false);
@@ -94,7 +103,7 @@ export default function App() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Inicializar sesión
+  // Inicializar chat
   useEffect(() => {
     const setup = async () => {
       try {
@@ -118,7 +127,7 @@ export default function App() {
           setMessages([{
             id: 'welcome',
             role: 'model',
-            text: "¡Hola! Soy tu Copiloto iTRAVEL_MAP. ¿Desde dónde empezarás tu viaje y a dónde te gustaría ir? Puedes ajustar tu origen, fechas y presupuesto en el panel lateral, o simplemente decírmelo por aquí."
+            text: "¡Hola! Soy tu Copiloto iTRAVEL_MAP. ¿Desde dónde empezarás tu viaje y a dónde te gustaría ir? Abre el menú ☰ arriba a la izquierda para ajustar origen, destino y presupuesto, o escríbeme directamente por aquí."
           }]);
         }
       } catch (error: any) {
@@ -126,7 +135,7 @@ export default function App() {
         setMessages([{
           id: 'error',
           role: 'model',
-          text: `⚠️ **Configuración Local Necesaria**\n\nEl chat no funciona porque la variable \`process.env.API_KEY\` no existe en tu entorno local.\n\n**Si usas Vite, sigue estos pasos:**\n1. Crea un archivo \`.env\` en la raíz de tu proyecto y añade tu clave: \`VITE_API_KEY=tu_clave_aqui\`\n2. Edita tu archivo \`vite.config.ts\` para inyectar la variable así:\n\`\`\`typescript\nimport { defineConfig, loadEnv } from 'vite';\nimport react from '@vitejs/plugin-react';\n\nexport default defineConfig(({ mode }) => {\n  const env = loadEnv(mode, process.cwd(), '');\n  return {\n    plugins: [react()],\n    define: {\n      'process.env.API_KEY': JSON.stringify(env.VITE_API_KEY)\n    }\n  };\n});\n\`\`\`\n\n*(Detalle técnico: ${error.message})*`,
+          text: `⚠️ **Configuración local necesaria**\n\n${error.message}`,
           isError: true
         }]);
       }
@@ -135,27 +144,17 @@ export default function App() {
     if (!isInitialized) {
       setup();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
-
-  // Re-inicializar chat estándar si cambian las preferencias
-  useEffect(() => {
-    if (isInitialized && !useAdk) {
-      try {
-        initChat(preferences);
-      } catch (e) {
-        console.error("Error al re-inicializar el chat", e);
-      }
-    }
-  }, [preferences, isInitialized, useAdk]);
+  }, [userId, isInitialized, preferences]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (isChatOpen) {
+      scrollToBottom();
+    }
+  }, [messages, isChatOpen]);
 
   const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim() || isLoading || !isInitialized) return;
@@ -164,10 +163,10 @@ export default function App() {
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     setIsLoading(true);
+    setIsChatOpen(true);
 
     try {
       if (useAdk && sessionId) {
-        // Lógica ADK (Streaming)
         const modelMsgId = (Date.now() + 1).toString();
         setMessages(prev => [...prev, { id: modelMsgId, role: 'model', text: '' }]);
         let fullText = '';
@@ -179,7 +178,6 @@ export default function App() {
         
         updateItineraryState([...messages, userMsg, { id: modelMsgId, role: 'model', text: fullText }]);
       } else {
-        // Lógica Estándar Original (Funciona con Google Search y Grounding)
         const response = await sendMessageToAgent(userMsg.text);
         const modelMsg: Message = {
           id: (Date.now() + 1).toString(),
@@ -196,7 +194,7 @@ export default function App() {
       setMessages(prev => [...prev, { 
         id: Date.now().toString(), 
         role: 'model', 
-        text: `Error: ${error?.message || 'Algo salió mal. Por favor, comprueba tu clave API.'}`, 
+        text: `Error: ${error?.message || 'Algo salió mal. Comprueba tu clave API.'}`, 
         isError: true 
       }]);
     } finally {
@@ -214,7 +212,6 @@ export default function App() {
       const newPlan = await extractItineraryState(chatHistoryText, preferences);
       if (newPlan && newPlan.options && newPlan.options.length > 0) {
         setTripPlan(newPlan);
-        // Si no hay opción seleccionada, o la seleccionada ya no existe, selecciona la primera
         if (!selectedOptionId || !newPlan.options.find(o => o.id === selectedOptionId)) {
           setSelectedOptionId(newPlan.options[0].id);
         }
@@ -226,6 +223,59 @@ export default function App() {
     }
   };
 
+  const handleApplyPreferences = (updatedPrefs: UserPreferences, destination?: string) => {
+    if (destination && destination.trim()) {
+      const prompt = `Quiero organizar un viaje con origen en ${updatedPrefs.originLocation || 'mi ciudad'} y destino ${destination}. Presupuesto máximo ${updatedPrefs.maxBudget}€.`;
+      setInputValue(prompt);
+      setTimeout(() => {
+        handleSendMessage();
+      }, 100);
+    }
+  };
+
+  // Guardar viaje actual en el historial
+  const handleSaveCurrentTrip = () => {
+    const origin = preferences.originLocation || 'Origen';
+    const dest = tripPlan?.options?.[0]?.title || 'Viaje Personalizado';
+    const newSaved: SavedTrip = {
+      id: Date.now().toString(),
+      title: dest,
+      origin: origin,
+      destination: dest,
+      dateCreated: new Date().toLocaleDateString('es-ES'),
+      preferences: { ...preferences },
+      messages: [...messages],
+      tripPlan: tripPlan ? { ...tripPlan } : null
+    };
+
+    const updated = [newSaved, ...savedTrips];
+    setSavedTrips(updated);
+    try {
+      localStorage.setItem('itravel_saved_trips', JSON.stringify(updated));
+      alert("¡Viaje guardado correctamente en tu historial!");
+    } catch (e) {
+      console.error("Error al guardar viaje:", e);
+    }
+  };
+
+  const handleLoadTrip = (saved: SavedTrip) => {
+    setPreferences(saved.preferences);
+    setMessages(saved.messages);
+    setTripPlan(saved.tripPlan);
+    if (saved.tripPlan?.options?.[0]?.id) {
+      setSelectedOptionId(saved.tripPlan.options[0].id);
+    }
+    setIsChatOpen(true);
+  };
+
+  const handleDeleteTrip = (tripId: string) => {
+    const updated = savedTrips.filter(t => t.id !== tripId);
+    setSavedTrips(updated);
+    try {
+      localStorage.setItem('itravel_saved_trips', JSON.stringify(updated));
+    } catch (e) {}
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -233,162 +283,194 @@ export default function App() {
     }
   };
 
-  // Obtener la opción seleccionada para pasarla al mapa
   const selectedOption = tripPlan?.options.find(o => o.id === selectedOptionId) || null;
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-50 overflow-hidden font-sans">
+    <div className="relative h-screen w-full bg-slate-950 overflow-hidden font-sans select-none">
       
-      {/* Mobile Top Header Bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-slate-900 text-white border-b border-slate-800 shrink-0 z-20">
-        <button 
-          onClick={() => setIsMobileSidebarOpen(true)}
-          className="p-2 text-slate-300 hover:text-white rounded-lg bg-slate-800 transition-colors"
-          title="Abrir menú y filtros"
-        >
-          <Menu size={20} />
-        </button>
-        <div className="flex items-center gap-2 font-bold text-sm tracking-wide">
-          <span className="w-6 h-6 bg-brand-500 rounded-md flex items-center justify-center text-xs font-black shadow-sm">iT</span>
-          iTRAVEL_MAP
+      {/* 1. PERMANENT INTERACTIVE MAP BACKGROUND */}
+      <div className="absolute inset-0 z-0">
+        <MapView option={selectedOption} />
+      </div>
+
+      {/* 2. TOP-LEFT HAMBURGER MENU BUTTON */}
+      <button 
+        onClick={() => setIsMobileSidebarOpen(true)}
+        className="fixed top-4 left-4 z-40 bg-slate-900/90 text-white p-2.5 px-3.5 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-2 hover:bg-slate-800 transition-all backdrop-blur-md active:scale-95 cursor-pointer"
+        title="Abrir ajustes de viaje y menú"
+      >
+        <Menu size={20} className="text-brand-400" />
+        <span className="font-bold text-xs tracking-wide">iTRAVEL_MAP</span>
+      </button>
+
+      {/* 3. TOP-RIGHT FLOATING CONTROLS (TABS & USER) */}
+      <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
+        <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-1 shadow-2xl flex items-center gap-1">
+          <button
+            onClick={() => {
+              setIsChatOpen(!isChatOpen);
+              if (isItineraryOpen) setIsItineraryOpen(false);
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${isChatOpen ? 'bg-brand-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+          >
+            <MessageSquare size={14} />
+            <span className="hidden sm:inline">Copiloto</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setIsItineraryOpen(!isItineraryOpen);
+              if (isChatOpen) setIsChatOpen(false);
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all relative ${isItineraryOpen ? 'bg-brand-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+          >
+            <Calendar size={14} />
+            <span className="hidden sm:inline">Itinerario</span>
+            {tripPlan?.options && tripPlan.options.length > 0 && (
+              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+            )}
+          </button>
+
+          <button
+            onClick={() => {
+              setIsChatOpen(false);
+              setIsItineraryOpen(false);
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${!isChatOpen && !isItineraryOpen ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
+            title="Ver mapa despejado"
+          >
+            <MapIcon size={14} />
+            <span className="hidden sm:inline">Mapa</span>
+          </button>
         </div>
-        {activeUser ? (
-          activeUser.photoURL ? (
-            <img src={activeUser.photoURL} alt="" className="w-7 h-7 rounded-full border border-brand-500 shadow-sm" />
-          ) : (
-            <div className="w-7 h-7 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
-              {activeUser.displayName ? activeUser.displayName[0] : 'U'}
-            </div>
-          )
-        ) : (
-          <div className="w-7 text-[10px] text-brand-400 font-semibold bg-brand-950 px-1.5 py-0.5 rounded border border-brand-800">PRO</div>
+
+        {activeUser && (
+          <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 p-1.5 rounded-2xl shadow-2xl hidden md:flex items-center gap-2">
+            {activeUser.photoURL ? (
+              <img src={activeUser.photoURL} alt="" className="w-6 h-6 rounded-full border border-brand-500" />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-[10px]">
+                {activeUser.displayName ? activeUser.displayName[0] : 'U'}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden relative">
-        
-        {/* Sidebar Navigation */}
-        <Sidebar 
-          preferences={preferences} 
-          setPreferences={setPreferences} 
-          user={activeUser} 
-          isOpenMobile={isMobileSidebarOpen}
-          onCloseMobile={() => setIsMobileSidebarOpen(false)}
-          onLogout={handleLogout}
-          onOpenLoginModal={() => setIsLoginModalOpen(true)}
-        />
+      {/* 4. SIDEBAR DRAWER (ORIGIN, DESTINATION AUTOCOMPLETE, SAVED TRIPS) */}
+      <Sidebar 
+        preferences={preferences} 
+        setPreferences={setPreferences} 
+        user={activeUser} 
+        isOpenMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        onLogout={handleLogout}
+        onOpenLoginModal={() => setIsLoginModalOpen(true)}
+        onApplyPreferences={handleApplyPreferences}
+        savedTrips={savedTrips}
+        onLoadTrip={handleLoadTrip}
+        onDeleteTrip={handleDeleteTrip}
+        onSaveCurrentTrip={handleSaveCurrentTrip}
+      />
 
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden w-full relative">
+      {/* 5. FLOATING TRANSLUCENT CHAT OVERLAY */}
+      {isChatOpen && (
+        <div className="fixed inset-x-4 top-16 bottom-24 max-w-2xl mx-auto z-20 bg-slate-950/80 backdrop-blur-md border border-slate-800/80 rounded-3xl p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+          <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-brand-400" />
+              <h2 className="font-semibold text-xs sm:text-sm">Copiloto IA (Gemini 3.6 Flash)</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              {isUpdatingItinerary && <Loader2 size={14} className="animate-spin text-brand-400" />}
+              <button 
+                onClick={() => setIsChatOpen(false)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
           
-          {/* Chat Panel */}
-          <div className={`w-full md:w-1/3 lg:w-[400px] flex flex-col border-r border-slate-200 bg-white z-10 shadow-sm h-full ${mobileTab === 'chat' ? 'flex' : 'hidden md:flex'}`}>
-            <div className="p-3 md:p-4 border-b border-slate-100 bg-white/80 backdrop-blur-sm flex justify-between items-center shrink-0">
-              <h2 className="font-semibold text-slate-800 text-sm md:text-base">Copiloto</h2>
-              {isUpdatingItinerary && <Loader2 size={16} className="animate-spin text-brand-500" />}
-            </div>
-            
-            <div className="flex-1 overflow-y-auto">
-              {messages.map(msg => (
-                <ChatMessage key={msg.id} message={msg} />
-              ))}
-              {isLoading && (!useAdk || !sessionId) && (
-                <div className="p-4 flex gap-4 bg-white">
-                  <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 shrink-0">
-                    <Loader2 size={18} className="animate-spin" />
-                  </div>
-                  <div className="text-sm text-slate-500 mt-1.5">Pensando y buscando datos en vivo...</div>
+          <div className="flex-1 overflow-y-auto py-2">
+            {messages.map(msg => (
+              <ChatMessage key={msg.id} message={msg} />
+            ))}
+            {isLoading && (!useAdk || !sessionId) && (
+              <div className="p-4 flex gap-3 bg-slate-900/60 rounded-2xl border border-slate-800 my-2">
+                <div className="w-7 h-7 rounded-full bg-brand-500/20 flex items-center justify-center text-brand-400 shrink-0">
+                  <Loader2 size={16} className="animate-spin" />
                 </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <div className="p-3 md:p-4 bg-white border-t border-slate-100 shrink-0">
-              <div className="relative flex items-end gap-2 bg-slate-50 border border-slate-200 rounded-xl p-2 focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition-all">
-                <textarea
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Planea un viaje a Italia, o pega una URL..."
-                  className="w-full max-h-32 min-h-[44px] bg-transparent border-none focus:ring-0 resize-none text-sm py-2 px-2 text-slate-800 placeholder-slate-400"
-                  rows={1}
-                />
-                <div className="flex gap-1 pb-1">
-                  <button 
-                    className="p-2 text-slate-400 hover:text-brand-600 transition-colors rounded-lg hover:bg-brand-50"
-                    title="Pegar URL para extraer información"
-                    onClick={() => setInputValue(prev => prev + ' https://')}
-                  >
-                    <LinkIcon size={18} />
-                  </button>
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={!inputValue.trim() || isLoading || !isInitialized}
-                    className="p-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Send size={18} />
-                  </button>
-                </div>
+                <div className="text-xs text-slate-300 mt-1">Pensando y consultando rutas en vivo...</div>
               </div>
-              <div className="text-[10px] text-slate-400 text-center mt-2">
-                iTRAVEL_MAP puede cometer errores. Verifica los detalles importantes.
-              </div>
-            </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
-
-          {/* Visual Panels Container (Map + Itinerary) */}
-          <div className={`flex-1 flex-col bg-slate-50/50 relative overflow-hidden h-full ${mobileTab !== 'chat' ? 'flex' : 'hidden md:flex'}`}>
-            
-            {/* Map Section */}
-            <div className={`border-b border-slate-200 relative z-0 shadow-inner ${mobileTab === 'map' ? 'h-full' : mobileTab === 'itinerary' ? 'hidden md:block md:h-1/2' : 'h-1/2'}`}>
-              <MapView option={selectedOption} />
-            </div>
-            
-            {/* Itinerary Timeline Section */}
-            <div className={`overflow-hidden relative z-10 bg-slate-50 ${mobileTab === 'itinerary' ? 'h-full' : mobileTab === 'map' ? 'hidden md:block md:h-1/2' : 'h-1/2'}`}>
-              <ItineraryView 
-                tripPlan={tripPlan} 
-                isUpdating={isUpdatingItinerary} 
-                selectedOptionId={selectedOptionId}
-                onSelectOption={setSelectedOptionId}
-              />
-            </div>
-
-          </div>
-
         </div>
+      )}
 
+      {/* 6. FLOATING TRANSLUCENT ITINERARY OVERLAY */}
+      {isItineraryOpen && (
+        <div className="fixed inset-x-4 top-16 bottom-24 max-w-4xl mx-auto z-20 bg-slate-950/85 backdrop-blur-md border border-slate-800/80 rounded-3xl p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+          <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
+            <h2 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
+              <Calendar size={16} className="text-brand-400" />
+              Itinerarios y Opciones Generadas
+            </h2>
+            <button 
+              onClick={() => setIsItineraryOpen(false)}
+              className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto">
+            <ItineraryView 
+              tripPlan={tripPlan} 
+              isUpdating={isUpdatingItinerary} 
+              selectedOptionId={selectedOptionId}
+              onSelectOption={setSelectedOptionId}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 7. FLOATING BOTTOM CHAT INPUT BAR OVER MAP */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[92%] max-w-2xl bg-slate-950/90 backdrop-blur-md border border-slate-800/90 rounded-2xl p-2 shadow-2xl flex items-center gap-2 focus-within:border-brand-500 transition-all">
+        <textarea
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => {
+            if (!isChatOpen) setIsChatOpen(true);
+          }}
+          placeholder="Escribe a dónde quieres ir o pega una URL de viaje..."
+          className="w-full max-h-28 min-h-[40px] bg-transparent border-none focus:ring-0 resize-none text-xs sm:text-sm py-2 px-3 text-white placeholder-slate-400"
+          rows={1}
+        />
+        <div className="flex items-center gap-1">
+          <button 
+            className="p-2 text-slate-400 hover:text-brand-400 transition-colors rounded-xl hover:bg-slate-800"
+            title="Pegar URL"
+            onClick={() => {
+              setInputValue(prev => prev + ' https://');
+              setIsChatOpen(true);
+            }}
+          >
+            <LinkIcon size={18} />
+          </button>
+          <button
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim() || isLoading || !isInitialized}
+            className="p-2.5 bg-brand-500 text-white rounded-xl hover:bg-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-brand-500/20 active:scale-95"
+          >
+            <Send size={18} />
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden flex border-t border-slate-200 bg-white/95 backdrop-blur-md shrink-0 shadow-lg z-30">
-        <button
-          onClick={() => setMobileTab('chat')}
-          className={`flex-1 py-2 flex flex-col items-center justify-center text-xs font-medium transition-colors ${mobileTab === 'chat' ? 'text-brand-600 font-bold border-t-2 border-brand-500 bg-brand-50/50' : 'text-slate-500 hover:text-slate-800'}`}
-        >
-          <MessageSquare size={18} />
-          <span className="mt-0.5 text-[11px]">Copiloto</span>
-        </button>
-        <button
-          onClick={() => setMobileTab('map')}
-          className={`flex-1 py-2 flex flex-col items-center justify-center text-xs font-medium transition-colors ${mobileTab === 'map' ? 'text-brand-600 font-bold border-t-2 border-brand-500 bg-brand-50/50' : 'text-slate-500 hover:text-slate-800'}`}
-        >
-          <MapIcon size={18} />
-          <span className="mt-0.5 text-[11px]">Mapa</span>
-        </button>
-        <button
-          onClick={() => setMobileTab('itinerary')}
-          className={`flex-1 py-2 flex flex-col items-center justify-center text-xs font-medium transition-colors relative ${mobileTab === 'itinerary' ? 'text-brand-600 font-bold border-t-2 border-brand-500 bg-brand-50/50' : 'text-slate-500 hover:text-slate-800'}`}
-        >
-          <Calendar size={18} />
-          <span className="mt-0.5 text-[11px]">Itinerario</span>
-          {tripPlan?.options && tripPlan.options.length > 0 && (
-            <span className="absolute top-1.5 right-1/4 w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
-          )}
-        </button>
-      </div>
-
-      {/* Professional Web App Welcome / Login Modal */}
+      {/* 8. PROFESSIONAL LOGIN MODAL */}
       <LoginModal 
         isOpen={isLoginModalOpen} 
         onLoginSuccess={handleLoginSuccess} 
