@@ -252,8 +252,14 @@ export default function App() {
           <span className="w-6 h-6 bg-brand-500 rounded-md flex items-center justify-center text-xs font-black shadow-sm">iT</span>
           iTRAVEL_MAP
         </div>
-        {user ? (
-          <img src={user.photoURL || ''} alt="" className="w-7 h-7 rounded-full border border-brand-500 shadow-sm" />
+        {activeUser ? (
+          activeUser.photoURL ? (
+            <img src={activeUser.photoURL} alt="" className="w-7 h-7 rounded-full border border-brand-500 shadow-sm" />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+              {activeUser.displayName ? activeUser.displayName[0] : 'U'}
+            </div>
+          )
         ) : (
           <div className="w-7 text-[10px] text-brand-400 font-semibold bg-brand-950 px-1.5 py-0.5 rounded border border-brand-800">PRO</div>
         )}
