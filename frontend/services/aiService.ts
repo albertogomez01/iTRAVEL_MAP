@@ -61,6 +61,9 @@ Capacidades y Reglas Clave:
 Tono: Profesional, inspirador, muy organizado y conciso. Usa markdown para facilitar la lectura.
 `;
 
+let activeModel = 'gemini-2.0-flash';
+let lastPreferences: UserPreferences | null = null;
+
 export const initChat = (preferences: UserPreferences) => {
   if (!ai) {
     try {
@@ -70,6 +73,7 @@ export const initChat = (preferences: UserPreferences) => {
     }
   }
 
+  lastPreferences = preferences;
   const originStr = preferences.originLocation ? `\n  - Localidad de Origen: ${preferences.originLocation}` : '';
   const datesStr = preferences.startDate && preferences.endDate 
     ? `\n  - Fechas del viaje: Del ${preferences.startDate} al ${preferences.endDate}` 
@@ -82,7 +86,7 @@ export const initChat = (preferences: UserPreferences) => {
   - Ritmo de Viaje: ${preferences.pace}${datesStr}`;
 
   chatSession = ai.chats.create({
-    model: MODEL_NAME,
+    model: activeModel,
     config: {
       systemInstruction: `${SYSTEM_INSTRUCTION}\n\n${prefString}`,
       tools: [{ googleSearch: {} }], // Búsqueda en vivo activada
@@ -94,17 +98,44 @@ export const initChat = (preferences: UserPreferences) => {
 export const sendMessageToAgent = async (message: string) => {
   if (!ai || !chatSession) throw new Error("Sesión de chat no inicializada");
   
-  const response = await chatSession.sendMessage({ message });
-  
-  // Extraer enlaces de la búsqueda
-  const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-  
-  return {
-    text: response.text,
-    groundingChunks: groundingChunks.map((chunk: any) => ({
-      web: chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : undefined
-    })).filter((c: any) => c.web !== undefined)
-  };
+  try {
+    const response = await chatSession.sendMessage({ message });
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    
+    return {
+      text: response.text,
+      groundingChunks: groundingChunks.map((chunk: any) => ({
+        web: chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : undefined
+      })).filter((c: any) => c.web !== undefined)
+    };
+  } catch (error: any) {
+    const errMsg = String(error?.message || error);
+    if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('404') || errMsg.includes('limit: 0')) {
+      console.warn("Límite o fallo detectado en el modelo actual. Probando modelo de respaldo (gemini-1.5-flash)...");
+      activeModel = 'gemini-1.5-flash';
+      if (lastPreferences) {
+        initChat(lastPreferences);
+      } else {
+        chatSession = ai.chats.create({
+          model: 'gemini-1.5-flash',
+          config: {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            tools: [{ googleSearch: {} }],
+            temperature: 0.7,
+          },
+        });
+      }
+      const response = await chatSession.sendMessage({ message });
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      return {
+        text: response.text,
+        groundingChunks: groundingChunks.map((chunk: any) => ({
+          web: chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : undefined
+        })).filter((c: any) => c.web !== undefined)
+      };
+    }
+    throw error;
+  }
 };
 
 // Schema for the Orchestrator to extract structured data
@@ -207,31 +238,34 @@ const tripPlanSchema = {
 export const extractItineraryState = async (chatHistoryText: string, preferences: UserPreferences): Promise<TripPlan | null> => {
   if (!ai) return null;
   
-  try {
-    const originContext = preferences.originLocation ? `, Origen: ${preferences.originLocation}` : '';
-    const datesContext = preferences.startDate && preferences.endDate 
-      ? `, Fechas: ${preferences.startDate} a ${preferences.endDate}` 
-      : '';
-    const prefContext = `Preferencias: Trenes Nocturnos: ${preferences.preferNightTrains}, Presupuesto Máx: ${preferences.maxBudget}€, Ritmo: ${preferences.pace}${datesContext}${originContext}.`;
-    
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: `Basándote en el siguiente historial de conversación y preferencias, extrae el plan de viaje. DEBES generar EXACTAMENTE 3 opciones de itinerario (ej. Económica, Equilibrada, Rápida) para que el usuario elija. Si el usuario no ha dado un origen, pon 'Por definir'. Incluye enlaces de reserva útiles y duraciones de transporte precisas.\n\n${prefContext}\n\nHistorial de Conversación:\n${chatHistoryText}`,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: tripPlanSchema,
-        temperature: 0.2,
-      }
-    });
+  const originContext = preferences.originLocation ? `, Origen: ${preferences.originLocation}` : '';
+  const datesContext = preferences.startDate && preferences.endDate 
+    ? `, Fechas: ${preferences.startDate} a ${preferences.endDate}` 
+    : '';
+  const prefContext = `Preferencias: Trenes Nocturnos: ${preferences.preferNightTrains}, Presupuesto Máx: ${preferences.maxBudget}€, Ritmo: ${preferences.pace}${datesContext}${originContext}.`;
 
-    const jsonStr = response.text?.trim();
-    if (!jsonStr) return null;
-    
-    return JSON.parse(jsonStr) as TripPlan;
-  } catch (error) {
-    console.error("Error al extraer el estado del itinerario:", error);
-    return null;
+  const modelsToTry = [activeModel, 'gemini-1.5-flash', 'gemini-2.5-flash'];
+  for (const model of modelsToTry) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: `Basándote en el siguiente historial de conversación y preferencias, extrae el plan de viaje. DEBES generar EXACTAMENTE 3 opciones de itinerario (ej. Económica, Equilibrada, Rápida) para que el usuario elija. Si el usuario no ha dado un origen, pon 'Por definir'. Incluye enlaces de reserva útiles y duraciones de transporte precisas.\n\n${prefContext}\n\nHistorial de Conversación:\n${chatHistoryText}`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: tripPlanSchema,
+          temperature: 0.2,
+        }
+      });
+
+      const jsonStr = response.text?.trim();
+      if (!jsonStr) continue;
+      
+      return JSON.parse(jsonStr) as TripPlan;
+    } catch (error: any) {
+      console.warn(`Error extrayendo itinerario con modelo ${model}:`, error?.message || error);
+    }
   }
+  return null;
 };
 
 // ============================================================================
