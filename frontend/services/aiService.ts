@@ -41,7 +41,7 @@ try {
   console.warn("Inicialización inicial de GoogleGenAI pospuesta hasta que se configure la API Key.");
 }
 
-const MODEL_NAME = 'gemini-2.5-flash';
+const MODEL_NAME = 'gemini-2.0-flash';
 let chatSession: Chat | null = null;
 
 const SYSTEM_INSTRUCTION = `
@@ -305,7 +305,7 @@ export const generateAppLogo = async (): Promise<string | null> => {
   
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: '3D modern mobile app icon logo for a travel application. In the center, a translucent dark blue sphere of a globe with glowing cyan grid lines (latitude and longitude) and subtle continent silhouettes. Overlaid prominently in the foreground are stylized 3D letters "iT" with a vibrant coral-to-orange gradient and a soft neon glow. A subtle dashed cyan flight path orbits the globe with a small plane. Deep dark navy blue background, soft studio lighting, Octane render, iOS app icon style, clean, 8k resolution --ar 1:1',
       config: {
         responseModalities: [Modality.IMAGE],
