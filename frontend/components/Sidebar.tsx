@@ -249,7 +249,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ preferences, setPreferences, u
       </div>
       
       <div className="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
-        Desarrollado con Vertex AI<br/>Gemini 2.5 Flash
+        Desarrollado con Google Gemini<br/>Gemini 2.0 Flash
       </div>
 
       {showKeyModal && (
@@ -263,7 +263,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ preferences, setPreferences, u
             </p>
             <input
               type="password"
-              placeholder="AIzaSy..."
+              placeholder="Tu API Key (AQ... o AIzaSy...)"
               value={customKeyInput}
               onChange={(e) => setCustomKeyInput(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-brand-500 text-white placeholder-slate-500"
