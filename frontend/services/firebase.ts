@@ -7,6 +7,16 @@ import {
   onAuthStateChanged,
   User 
 } from 'firebase/auth';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDocs, 
+  deleteDoc, 
+  query, 
+  orderBy 
+} from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_API_KEY) || (typeof process !== 'undefined' && process.env?.VITE_FIREBASE_API_KEY) || "",
@@ -23,6 +33,7 @@ export const isFirebaseConfigured = (): boolean => {
 
 const app = !getApps().length && isFirebaseConfigured() ? initializeApp(firebaseConfig) : (getApps().length ? getApp() : null);
 export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -46,4 +57,37 @@ export const subscribeToAuth = (callback: (user: User | null) => void) => {
     return () => {};
   }
   return onAuthStateChanged(auth, callback);
+};
+
+export const saveUserTripToFirestore = async (userId: string, trip: any) => {
+  if (!db || !userId) return;
+  try {
+    const tripRef = doc(db, 'users', userId, 'trips', trip.id);
+    await setDoc(tripRef, trip, { merge: true });
+  } catch (e) {
+    console.error("Error al guardar viaje en Firestore:", e);
+  }
+};
+
+export const getUserTripsFromFirestore = async (userId: string) => {
+  if (!db || !userId) return [];
+  try {
+    const tripsRef = collection(db, 'users', userId, 'trips');
+    const snapshot = await getDocs(tripsRef);
+    const trips = snapshot.docs.map(d => d.data() as any);
+    return trips.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+  } catch (e) {
+    console.error("Error al obtener viajes de Firestore:", e);
+    return [];
+  }
+};
+
+export const deleteUserTripFromFirestore = async (userId: string, tripId: string) => {
+  if (!db || !userId) return;
+  try {
+    const tripRef = doc(db, 'users', userId, 'trips', tripId);
+    await deleteDoc(tripRef);
+  } catch (e) {
+    console.error("Error al eliminar viaje de Firestore:", e);
+  }
 };

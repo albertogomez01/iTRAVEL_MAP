@@ -11,7 +11,12 @@ import { OnboardingGuideModal } from './components/OnboardingGuideModal';
 import { AppSplashScreen } from './components/AppSplashScreen';
 
 import { User } from 'firebase/auth';
-import { subscribeToAuth } from './services/firebase';
+import { 
+  subscribeToAuth, 
+  saveUserTripToFirestore, 
+  getUserTripsFromFirestore, 
+  deleteUserTripFromFirestore 
+} from './services/firebase';
 
 interface UserSession {
   displayName: string;
@@ -76,10 +81,30 @@ export default function App() {
   });
 
   useEffect(() => {
-    const unsubscribe = subscribeToAuth((currentUser) => {
+    const unsubscribe = subscribeToAuth(async (currentUser) => {
       setFirebaseUser(currentUser);
       if (currentUser) {
         setIsLoginModalOpen(false);
+        // Sincronización en la nube (Firestore) para la misma cuenta de Google en PC y móvil
+        try {
+          const remoteTrips = await getUserTripsFromFirestore(currentUser.uid);
+          if (remoteTrips && remoteTrips.length > 0) {
+            setSavedTrips(prevLocal => {
+              const combinedMap = new Map();
+              remoteTrips.forEach(t => combinedMap.set(t.id, t));
+              prevLocal.forEach(t => {
+                if (!combinedMap.has(t.id)) combinedMap.set(t.id, t);
+              });
+              const merged = Array.from(combinedMap.values()).sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+              try {
+                localStorage.setItem('itravel_saved_trips', JSON.stringify(merged));
+              } catch (e) {}
+              return merged;
+            });
+          }
+        } catch (err) {
+          console.error("Error sincronizando viajes de la nube:", err);
+        }
       }
     });
     return () => unsubscribe();
@@ -256,8 +281,8 @@ export default function App() {
     }
   };
 
-  // Guardar viaje actual en el historial
-  const handleSaveCurrentTrip = () => {
+  // Guardar viaje actual en el historial (Local + Nube Firestore)
+  const handleSaveCurrentTrip = async () => {
     const origin = preferences.originLocation || 'Origen';
     const dest = tripPlan?.options?.[0]?.title || 'Viaje Personalizado';
     const newSaved: SavedTrip = {
@@ -271,14 +296,19 @@ export default function App() {
       tripPlan: tripPlan ? { ...tripPlan } : null
     };
 
-    const updated = [newSaved, ...savedTrips];
+    const updated = [newSaved, ...savedTrips.filter(t => t.id !== newSaved.id)];
     setSavedTrips(updated);
     try {
       localStorage.setItem('itravel_saved_trips', JSON.stringify(updated));
-      alert("¡Viaje guardado correctamente en tu historial!");
     } catch (e) {
-      console.error("Error al guardar viaje:", e);
+      console.error("Error al guardar viaje local:", e);
     }
+
+    if (firebaseUser?.uid) {
+      await saveUserTripToFirestore(firebaseUser.uid, newSaved);
+    }
+
+    alert("¡Viaje guardado correctamente y sincronizado en tu cuenta de Google!");
   };
 
   const handleLoadTrip = (saved: SavedTrip) => {
@@ -291,12 +321,16 @@ export default function App() {
     setIsChatOpen(true);
   };
 
-  const handleDeleteTrip = (tripId: string) => {
+  const handleDeleteTrip = async (tripId: string) => {
     const updated = savedTrips.filter(t => t.id !== tripId);
     setSavedTrips(updated);
     try {
       localStorage.setItem('itravel_saved_trips', JSON.stringify(updated));
     } catch (e) {}
+
+    if (firebaseUser?.uid) {
+      await deleteUserTripFromFirestore(firebaseUser.uid, tripId);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
