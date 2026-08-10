@@ -486,28 +486,32 @@ export default function App() {
 
         {/* FLOATING 3 TRIP OPTIONS SELECTOR BAR ON MAP */}
         {tripPlan?.options && tripPlan.options.length > 0 && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[450] max-w-[92vw] sm:max-w-xl w-auto animate-fade-in">
-            <div className="bg-slate-900/95 text-white backdrop-blur-xl p-1.5 sm:p-2 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-1 sm:gap-2 overflow-x-auto">
-              <span className="text-[10px] sm:text-xs font-bold text-teal-400 uppercase tracking-wider px-2 hidden min-[500px]:inline shrink-0">
-                Ver Opción:
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[450] max-w-[95vw] sm:max-w-2xl w-auto animate-fade-in">
+            <div className="bg-slate-900/95 text-white backdrop-blur-xl p-1.5 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              <span className="text-[10px] font-extrabold text-teal-400 uppercase tracking-widest px-2 shrink-0 hidden min-[550px]:inline">
+                Opción:
               </span>
               {tripPlan.options.map((opt, index) => {
                 const isSelected = (selectedOptionId ? opt.id === selectedOptionId : index === 0);
-                const badgeColor = index === 0 ? 'bg-emerald-500' : index === 1 ? 'bg-sky-500' : 'bg-purple-500';
+                const badgeBg = index === 0 ? 'bg-emerald-500' : index === 1 ? 'bg-sky-500' : 'bg-purple-500';
+                const labelText = index === 0 ? 'Económica' : index === 1 ? 'Equilibrada' : 'Rápida';
                 
                 return (
                   <button
                     key={opt.id}
                     onClick={() => setSelectedOptionId(opt.id)}
-                    className={`px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                    className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
                       isSelected 
-                        ? 'bg-slate-800 text-white border border-teal-500/60 shadow-lg ring-1 ring-teal-400/40 scale-105' 
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent'
+                        ? 'bg-slate-800 text-white border border-teal-500/70 shadow-lg ring-2 ring-teal-500/30 scale-105' 
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50 border border-transparent'
                     }`}
+                    title={`${opt.title} - ${opt.estimatedBudget}`}
                   >
-                    <span className={`w-2 h-2 rounded-full ${badgeColor} shrink-0`} />
-                    <span className="truncate max-w-[90px] sm:max-w-[130px]">{opt.title}</span>
-                    <span className="text-[10px] text-slate-300 bg-slate-950/80 px-1.5 py-0.5 rounded-md font-semibold border border-slate-800">
+                    <span className={`w-2.5 h-2.5 rounded-full ${badgeBg} shrink-0 shadow-sm`} />
+                    <span className="font-bold text-white whitespace-nowrap">
+                      {`Opc. ${index + 1}: ${labelText}`}
+                    </span>
+                    <span className="text-[10px] font-bold text-teal-300 bg-slate-950/80 px-2 py-0.5 rounded-lg border border-slate-800/80 whitespace-nowrap">
                       {opt.estimatedBudget}
                     </span>
                   </button>

@@ -141,11 +141,11 @@ const MapActionsController: React.FC<{
 const getTransportColor = (mode?: string) => {
   if (!mode) return '#0d9488';
   switch (mode.toLowerCase()) {
-    case 'bus': return '#3b82f6';
-    case 'train': return '#ef4444';
-    case 'flight': return '#22c55e';
-    case 'ferry': return '#0ea5e9';
-    case 'walk': return '#f59e0b';
+    case 'train': return '#f43f5e'; // Rojo Rubí Intenso
+    case 'bus': return '#8b5cf6';   // Púrpura Intenso / Índigo
+    case 'flight': return '#06b6d4';// Cián Neón
+    case 'ferry': return '#0284c7'; // Azul Marino Profundo
+    case 'walk': return '#f59e0b';  // Ámbar Cálido
     default: return '#0d9488';
   }
 };
@@ -364,29 +364,47 @@ export const MapView: React.FC<MapViewProps> = ({
           setZoomOutHandler={setZoomOutFn}
         />
         
-        {/* 1. Inter-city Realistic OSRM Polylines */}
+        {/* 1. Inter-city Realistic OSRM Polylines (Double Stroke for High Contrast) */}
         {showMainRoutes && realisticSegments.map((seg, idx) => (
-          <Polyline 
-            key={`segment-${idx}`}
-            positions={seg.positions} 
-            color={seg.color} 
-            weight={4.5} 
-            dashArray={seg.mode.toLowerCase() === 'flight' ? '8, 8' : undefined}
-            className="animated-route"
-            opacity={0.85} 
-          />
+          <React.Fragment key={`segment-group-${idx}`}>
+            <Polyline 
+              key={`bg-segment-${idx}`}
+              positions={seg.positions} 
+              color="#0f172a" 
+              weight={8} 
+              opacity={0.6} 
+            />
+            <Polyline 
+              key={`segment-${idx}`}
+              positions={seg.positions} 
+              color={seg.color} 
+              weight={5} 
+              dashArray={seg.mode.toLowerCase() === 'flight' ? '10, 8' : undefined}
+              className="animated-route"
+              opacity={0.95} 
+            />
+          </React.Fragment>
         ))}
 
         {/* 2. Intra-city Local Day Paths */}
         {showDayPaths && dayLocalPaths.map((lp, idx) => (
-          <Polyline 
-            key={`local-path-${idx}-${lp.dayNumber}`}
-            positions={lp.positions}
-            color="#f59e0b"
-            weight={2.5}
-            dashArray="5, 6"
-            opacity={0.7}
-          />
+          <React.Fragment key={`local-path-group-${idx}-${lp.dayNumber}`}>
+            <Polyline 
+              key={`bg-local-path-${idx}-${lp.dayNumber}`}
+              positions={lp.positions}
+              color="#0f172a"
+              weight={5}
+              opacity={0.4}
+            />
+            <Polyline 
+              key={`local-path-${idx}-${lp.dayNumber}`}
+              positions={lp.positions}
+              color="#f59e0b"
+              weight={3}
+              dashArray="5, 6"
+              opacity={0.9}
+            />
+          </React.Fragment>
         ))}
 
         {/* 2.5 Origin Marker (No Popup, simple route anchor) */}
@@ -623,10 +641,11 @@ export const MapView: React.FC<MapViewProps> = ({
             Leyenda de Transporte
           </div>
           <div className="flex flex-col gap-1.5 text-[11px]">
-            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-red-500 rounded-full"></div> Tren</div>
-            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-blue-500 rounded-full"></div> Autobús</div>
-            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-green-500 rounded-full"></div> Vuelo</div>
-            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-teal-500 rounded-full"></div> Ferry</div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-[#f43f5e] rounded-full shadow-sm"></div> 🚆 Tren (Interrail)</div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-[#8b5cf6] rounded-full shadow-sm"></div> 🚌 Autobús</div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-[#06b6d4] rounded-full shadow-sm"></div> ✈️ Vuelo</div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-[#0284c7] rounded-full shadow-sm"></div> ⛴️ Ferry</div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-[#f59e0b] rounded-full shadow-sm"></div> 📍 Rutas del Día</div>
           </div>
         </div>
 
