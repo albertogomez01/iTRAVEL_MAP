@@ -110,7 +110,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         <div 
           className={`flex flex-col rounded-2xl p-3 sm:p-4 shadow-xl text-xs sm:text-sm border transition-all ${
             isModel 
-              ? 'bg-[#202c33] text-white rounded-tl-xs border-[#2a3942] shadow-slate-950/60' 
+              ? 'bg-slate-800 text-white rounded-tl-xs border-slate-700/80 shadow-slate-950/80' 
               : 'bg-[#005c4b] text-white rounded-tr-xs border-[#007a63]/50 shadow-emerald-950/30'
           }`}
         >

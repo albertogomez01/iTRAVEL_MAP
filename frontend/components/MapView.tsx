@@ -54,7 +54,7 @@ const createPoiIcon = (name: string, category: string) => {
 // Custom Zoom Control Buttons inside Leaflet context
 const MapZoomButtons: React.FC<{ onZoomIn: () => void; onZoomOut: () => void }> = ({ onZoomIn, onZoomOut }) => {
   return (
-    <div className="absolute top-16 left-3 sm:top-20 sm:left-4 z-10 flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-2xl text-white">
+    <div className="absolute bottom-6 left-3 sm:bottom-6 sm:left-4 z-[500] flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-2xl text-white">
       <button
         onClick={onZoomIn}
         className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-brand-500 text-white flex items-center justify-center font-bold text-lg transition-colors active:scale-95"
@@ -551,7 +551,7 @@ export const MapView: React.FC<MapViewProps> = ({
       </button>
 
       {/* Floating Left Control Panel (Capas, Agrandar Ciudad, Leyenda) */}
-      <div className={`absolute top-16 right-3 sm:top-20 sm:left-16 sm:right-auto z-10 flex flex-col gap-2.5 max-w-[220px] sm:max-w-[210px] ${showMobilePanel ? 'flex' : 'hidden sm:flex'}`}>
+      <div className={`absolute top-16 right-3 sm:top-16 sm:left-4 sm:right-auto z-[500] flex flex-col gap-2.5 max-w-[220px] sm:max-w-[210px] ${showMobilePanel ? 'flex' : 'hidden sm:flex'}`}>
         
         {/* 1. Capas del Mapa */}
         <div className="bg-slate-900/95 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
