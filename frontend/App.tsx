@@ -625,9 +625,9 @@ export default function App() {
         </div>
       )}
 
-      {/* 6. FLOATING TRANSLUCENT ITINERARY OVERLAY */}
+      {/* 6. FLOATING TRANSLUCENT ITINERARY OVERLAY (RIGHT ALIGNED - SAME POSITION AS COPILOT) */}
       {isItineraryOpen && (
-        <div className="fixed inset-x-2 sm:inset-x-4 top-14 sm:top-16 bottom-20 sm:bottom-24 max-w-4xl mx-auto z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+        <div className="fixed inset-x-2 sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-14 sm:top-16 bottom-20 sm:bottom-24 z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
           <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
             <h2 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
               <Calendar size={15} className="text-brand-400" />

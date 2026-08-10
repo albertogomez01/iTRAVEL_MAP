@@ -68,11 +68,11 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Sub-Header Tabs in Itinerary View */}
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2 shrink-0">
+      <div className="flex items-center justify-between border-b border-slate-800/80 bg-slate-900/80 rounded-2xl p-1.5 mb-2 shrink-0 text-white">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('current')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${activeTab === 'current' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${activeTab === 'current' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800'}`}
           >
             <Calendar size={14} />
             <span>Ruta Actual</span>
@@ -80,21 +80,21 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
           
           <button
             onClick={() => setActiveTab('saved')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors relative ${activeTab === 'saved' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors relative ${activeTab === 'saved' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800'}`}
           >
             <Bookmark size={14} />
-            <span>Mis Viajes Guardados ({savedTrips.length})</span>
+            <span>Guardados ({savedTrips.length})</span>
           </button>
         </div>
 
         {activeTab === 'current' && tripPlan?.options && tripPlan.options.length > 0 && onSaveCurrentTrip && (
           <button
             onClick={onSaveCurrentTrip}
-            className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95"
             title="Guardar este viaje en tu historial"
           >
             <Bookmark size={13} />
-            <span>Guardar Viaje</span>
+            <span className="hidden sm:inline">Guardar Viaje</span>
           </button>
         )}
       </div>
