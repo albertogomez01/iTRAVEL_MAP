@@ -98,15 +98,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop (mobile & tablet only) */}
       {isOpenMobile && (
         <div 
-          className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-40"
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-40 lg:hidden"
           onClick={onCloseMobile}
         />
       )}
 
-      <div className={`fixed inset-y-0 left-0 z-50 w-80 sm:w-80 bg-slate-900 text-slate-300 flex flex-col h-full border-r border-slate-800 transform transition-transform duration-300 ease-in-out ${isOpenMobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-80 lg:w-80 bg-slate-900 text-slate-300 flex flex-col h-full border-r border-slate-800 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 shrink-0 ${isOpenMobile ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}`}>
         {/* App Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between text-white">
           <div className="flex items-center gap-2.5 group cursor-pointer">

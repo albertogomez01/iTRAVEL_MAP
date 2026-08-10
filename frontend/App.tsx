@@ -438,7 +438,7 @@ export default function App() {
   const selectedOption = tripPlan?.options.find(o => o.id === selectedOptionId) || null;
 
   return (
-    <div className="relative h-screen w-full bg-slate-950 overflow-hidden font-sans select-none">
+    <div className="relative h-screen w-full bg-slate-950 overflow-hidden font-sans select-none flex flex-row">
       
       {/* APP UPDATE NOTIFIER (NEW BUILD DETECTED) */}
       <UpdateNotifier />
@@ -457,8 +457,24 @@ export default function App() {
         </div>
       )}
 
-      {/* 1. PERMANENT INTERACTIVE MAP BACKGROUND */}
-      <div className="absolute inset-0 z-0">
+      {/* 1. PERMANENT SIDEBAR (FIXED ON DESKTOP LG / DRAWER ON MOBILE) */}
+      <Sidebar 
+        preferences={preferences} 
+        setPreferences={setPreferences} 
+        user={activeUser} 
+        isOpenMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        onLogout={handleLogout}
+        onOpenLoginModal={() => setIsLoginModalOpen(true)}
+        onApplyPreferences={handleApplyPreferences}
+        savedTrips={savedTrips}
+        onLoadTrip={handleLoadTrip}
+        onDeleteTrip={handleDeleteTrip}
+        onSaveCurrentTrip={handleSaveCurrentTrip}
+      />
+
+      {/* 2. MAIN INTERACTIVE MAP AREA */}
+      <div className="relative flex-1 h-full overflow-hidden z-0">
         <MapView 
           option={selectedOption} 
           origin={tripPlan?.origin || preferences.originLocation}
@@ -469,10 +485,10 @@ export default function App() {
         />
       </div>
 
-      {/* 2. TOP-LEFT HAMBURGER MENU BUTTON */}
+      {/* 3. TOP-LEFT HAMBURGER MENU BUTTON (MOBILE / TABLET ONLY) */}
       <button 
         onClick={() => setIsMobileSidebarOpen(true)}
-        className="fixed top-2.5 left-2.5 sm:top-4 sm:left-4 z-40 bg-slate-900/90 text-white p-1.5 px-2.5 sm:p-2 sm:px-3 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-1.5 hover:bg-slate-800 transition-all backdrop-blur-md active:scale-95 cursor-pointer"
+        className="fixed top-2.5 left-2.5 sm:top-4 sm:left-4 z-40 lg:hidden bg-slate-900/90 text-white p-1.5 px-2.5 sm:p-2 sm:px-3 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-1.5 hover:bg-slate-800 transition-all backdrop-blur-md active:scale-95 cursor-pointer"
         title="Abrir ajustes de viaje y menú"
       >
         <Menu size={18} className="text-brand-400 shrink-0" />
@@ -534,21 +550,7 @@ export default function App() {
         )}
       </div>
 
-      {/* 4. SIDEBAR DRAWER (ORIGIN, DESTINATION AUTOCOMPLETE, SAVED TRIPS) */}
-      <Sidebar 
-        preferences={preferences} 
-        setPreferences={setPreferences} 
-        user={activeUser} 
-        isOpenMobile={isMobileSidebarOpen}
-        onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        onLogout={handleLogout}
-        onOpenLoginModal={() => setIsLoginModalOpen(true)}
-        onApplyPreferences={handleApplyPreferences}
-        savedTrips={savedTrips}
-        onLoadTrip={handleLoadTrip}
-        onDeleteTrip={handleDeleteTrip}
-        onSaveCurrentTrip={handleSaveCurrentTrip}
-      />
+
 
       {/* 5. FLOATING TRANSLUCENT CHAT OVERLAY (RIGHT ALIGNED ON DESKTOP) */}
       {isChatOpen && (

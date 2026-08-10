@@ -534,7 +534,7 @@ export const MapView: React.FC<MapViewProps> = ({
       </button>
 
       {/* Floating Left Control Panel (Capas, Agrandar Ciudad, Leyenda) */}
-      <div className={`absolute top-16 right-3 sm:top-16 sm:left-4 sm:right-auto z-[500] flex flex-col gap-2.5 max-w-[220px] sm:max-w-[210px] ${showMobilePanel ? 'flex' : 'hidden sm:flex'}`}>
+      <div className={`absolute top-16 right-3 sm:top-4 sm:left-4 sm:right-auto z-[500] flex flex-col gap-2.5 max-w-[220px] sm:max-w-[210px] ${showMobilePanel ? 'flex' : 'hidden sm:flex'}`}>
         
         {/* 1. Capas del Mapa */}
         <div className="bg-slate-900/95 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
