@@ -41,7 +41,7 @@ try {
   console.warn("Inicialización inicial de GoogleGenAI pospuesta hasta que se configure la API Key.");
 }
 
-const MODEL_NAME = 'gemini-2.0-flash';
+const MODEL_NAME = 'gemini-1.5-flash';
 let chatSession: Chat | null = null;
 
 const SYSTEM_INSTRUCTION = `
@@ -74,14 +74,23 @@ Reglas de Interacción y Formato Visual:
 `;
 
 const CANDIDATE_MODELS = [
-  'gemini-3.6-flash',
-  'gemini-3.5-flash',
-  'gemini-flash-latest',
-  'gemini-3.5-flash-lite'
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-2.0-flash'
 ];
 
 let activeModelIndex = 0;
 let lastPreferences: UserPreferences | null = null;
+
+// In-memory & LocalStorage Caches to minimize Gemini API calls & GCP costs
+const chatResponseCache = new Map<string, { text: string; groundingChunks?: any[] }>();
+const itineraryStateCache = new Map<string, TripPlan>();
+
+const getCacheKey = (prompt: string, prefs?: UserPreferences | null): string => {
+  const normPrompt = prompt.trim().toLowerCase();
+  const prefStr = prefs ? `${prefs.originLocation}_${prefs.maxBudget}_${prefs.passengers}_${prefs.tripType}_${prefs.pace}` : '';
+  return `${normPrompt}___${prefStr}`;
+};
 
 export const initChat = (preferences: UserPreferences) => {
   if (!ai) {
@@ -108,7 +117,7 @@ export const initChat = (preferences: UserPreferences) => {
   - Ritmo de Viaje: ${preferences.pace}${datesStr}`;
 
   const currentModel = CANDIDATE_MODELS[activeModelIndex] || CANDIDATE_MODELS[0];
-  console.log(`Inicializando chat con modelo: ${currentModel}`);
+  console.log(`Inicializando chat con modelo económico: ${currentModel}`);
 
   chatSession = ai.chats.create({
     model: currentModel,
@@ -116,6 +125,7 @@ export const initChat = (preferences: UserPreferences) => {
       systemInstruction: `${SYSTEM_INSTRUCTION}\n\n${prefString}`,
       tools: [{ googleSearch: {} }], // Búsqueda en vivo activada
       temperature: 0.7,
+      maxOutputTokens: 1500,
     },
   });
 };
@@ -123,17 +133,26 @@ export const initChat = (preferences: UserPreferences) => {
 export const sendMessageToAgent = async (message: string) => {
   if (!ai || !chatSession) throw new Error("Sesión de chat no inicializada");
   
+  const cacheKey = getCacheKey(message, lastPreferences);
+  if (chatResponseCache.has(cacheKey)) {
+    console.log("⚡ Respuesta de chat servida desde la caché (0 tokens GCP consumidos)");
+    return chatResponseCache.get(cacheKey)!;
+  }
+
   for (let attempt = 0; attempt < CANDIDATE_MODELS.length; attempt++) {
     try {
       const response = await chatSession.sendMessage({ message });
       const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
       
-      return {
+      const result = {
         text: response.text,
         groundingChunks: groundingChunks.map((chunk: any) => ({
           web: chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : undefined
         })).filter((c: any) => c.web !== undefined)
       };
+
+      chatResponseCache.set(cacheKey, result);
+      return result;
     } catch (error: any) {
       const errMsg = String(error?.message || error);
       console.warn(`Error con modelo ${CANDIDATE_MODELS[activeModelIndex]} (${errMsg}). Probando siguiente modelo...`);
@@ -148,6 +167,7 @@ export const sendMessageToAgent = async (message: string) => {
             systemInstruction: SYSTEM_INSTRUCTION,
             tools: [{ googleSearch: {} }],
             temperature: 0.7,
+            maxOutputTokens: 1500,
           },
         });
       }
@@ -568,6 +588,12 @@ export const enrichTripPlanCoordinatesAsync = async (plan: TripPlan, preferences
 export const extractItineraryState = async (chatHistoryText: string, preferences: UserPreferences): Promise<TripPlan | null> => {
   if (!ai) return null;
   
+  const cacheKey = getCacheKey(chatHistoryText, preferences);
+  if (itineraryStateCache.has(cacheKey)) {
+    console.log("⚡ Estado de itinerario recuperado desde la caché (0 tokens GCP consumidos)");
+    return itineraryStateCache.get(cacheKey)!;
+  }
+
   const originContext = preferences.originLocation ? `, Origen: ${preferences.originLocation}` : '';
   const tripTypeContext = preferences.tripType === 'OneWay' ? ', Tipo: Solo Ida (sin regreso al origen)' : ', Tipo: Ida y Vuelta (incluir trayecto de regreso al origen en el último día)';
   const datesContext = preferences.startDate && preferences.endDate 
@@ -602,6 +628,7 @@ ${chatHistoryText}`;
           responseMimeType: 'application/json',
           responseSchema: tripPlanSchema,
           temperature: 0.2,
+          maxOutputTokens: 2500,
         }
       });
 
@@ -609,7 +636,9 @@ ${chatHistoryText}`;
       if (!jsonStr) continue;
       
       const parsedPlan = JSON.parse(jsonStr) as TripPlan;
-      return await enrichTripPlanCoordinatesAsync(parsedPlan, preferences);
+      const enrichedPlan = await enrichTripPlanCoordinatesAsync(parsedPlan, preferences);
+      itineraryStateCache.set(cacheKey, enrichedPlan);
+      return enrichedPlan;
     } catch (error: any) {
       console.warn(`Error extrayendo itinerario con modelo ${model}:`, error?.message || error);
     }
