@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+declare const __APP_BUILD_TIME__: number;
+
 interface ImportMetaEnv {
   readonly VITE_GEMINI_API_KEY?: string;
   readonly VITE_FIREBASE_API_KEY?: string;

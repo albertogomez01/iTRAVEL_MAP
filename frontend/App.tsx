@@ -9,6 +9,7 @@ import { MapView } from './components/MapView';
 import { LoginModal } from './components/LoginModal';
 import { OnboardingGuideModal } from './components/OnboardingGuideModal';
 import { AppSplashScreen } from './components/AppSplashScreen';
+import { UpdateNotifier } from './components/UpdateNotifier';
 
 import { User } from 'firebase/auth';
 import { 
@@ -359,6 +360,9 @@ export default function App() {
   return (
     <div className="relative h-screen w-full bg-slate-950 overflow-hidden font-sans select-none">
       
+      {/* APP UPDATE NOTIFIER (NEW BUILD DETECTED) */}
+      <UpdateNotifier />
+
       {/* FLOATING NON-INTRUSIVE AI THINKING INDICATOR */}
       {(isLoading || isUpdatingItinerary) && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[500] bg-slate-900/95 text-white backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-brand-500/40 shadow-2xl flex items-center gap-3 animate-fade-in">
