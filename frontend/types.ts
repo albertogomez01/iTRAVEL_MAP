@@ -100,4 +100,5 @@ export interface UserPreferences {
   endDate?: string;
   maxBudget: number;
   tripType?: 'RoundTrip' | 'OneWay';
+  passengers?: number;
 }

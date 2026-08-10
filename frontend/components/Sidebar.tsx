@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Moon, Sun, Wallet, Activity, Loader2, Calendar, Banknote, MapPin, X, Check, RotateCcw, Bookmark, Trash2, Navigation } from 'lucide-react';
+import { Settings, Moon, Sun, Wallet, Activity, Loader2, Calendar, Banknote, MapPin, X, Check, RotateCcw, Bookmark, Trash2, Navigation, Users } from 'lucide-react';
 import { UserPreferences } from '../types';
 import { CityAutocompleteInput } from './CityAutocompleteInput';
 
@@ -254,6 +254,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <label htmlFor="toggle" className={`toggle-label block overflow-hidden h-4 rounded-full cursor-pointer transition-colors duration-200 ease-in-out ${draftPrefs.preferNightTrains ? 'bg-brand-500' : 'bg-slate-600'}`}></label>
                 </div>
               </label>
+            </div>
+
+            {/* Número de Viajeros / Personas */}
+            <div>
+              <label className="block text-[11px] font-medium text-slate-400 mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Users size={12} className="text-indigo-400" />
+                  Número de Viajeros
+                </span>
+                <span className="text-xs font-bold text-brand-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                  {draftPrefs.passengers || 1} {(draftPrefs.passengers || 1) === 1 ? 'persona' : 'personas'}
+                </span>
+              </label>
+              <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700/80 rounded-xl p-1.5 px-3 justify-between">
+                <span className="text-xs text-slate-300">¿Cuántos viajáis?</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setDraftPrefs(prev => ({ ...prev, passengers: Math.max(1, (prev.passengers || 1) - 1) }))}
+                    className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 active:scale-95 text-white font-bold flex items-center justify-center text-sm transition-all border border-slate-600"
+                    title="Restar viajero"
+                  >
+                    -
+                  </button>
+                  <span className="text-xs font-bold text-white w-5 text-center">{draftPrefs.passengers || 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => setDraftPrefs(prev => ({ ...prev, passengers: Math.min(20, (prev.passengers || 1) + 1) }))}
+                    className="w-7 h-7 rounded-lg bg-brand-600 hover:bg-brand-500 active:scale-95 text-white font-bold flex items-center justify-center text-sm transition-all border border-brand-500/50 shadow-sm"
+                    title="Añadir viajero"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Tipo de Viaje & Alojamiento & Ritmo */}

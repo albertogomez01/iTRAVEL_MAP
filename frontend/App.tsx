@@ -162,7 +162,8 @@ export default function App() {
     maxBudget: 1500,
     startDate: '',
     endDate: '',
-    tripType: 'RoundTrip'
+    tripType: 'RoundTrip',
+    passengers: 1
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -318,7 +319,10 @@ export default function App() {
 
   const handleApplyPreferences = (updatedPrefs: UserPreferences, destination?: string) => {
     if (destination && destination.trim()) {
-      const prompt = `Quiero organizar un viaje con origen en ${updatedPrefs.originLocation || 'mi ciudad'} y destino ${destination}. Presupuesto máximo ${updatedPrefs.maxBudget}€.`;
+      const passengersCount = updatedPrefs.passengers || 1;
+      const passengersStr = passengersCount > 1 ? ` para ${passengersCount} personas` : ' para 1 persona';
+      const tripTypeStr = updatedPrefs.tripType === 'RoundTrip' ? 'de ida y vuelta' : 'de solo ida';
+      const prompt = `Quiero organizar un viaje ${tripTypeStr}${passengersStr} con origen en ${updatedPrefs.originLocation || 'mi ciudad'} y destino ${destination}. Presupuesto máximo ${updatedPrefs.maxBudget}€.`;
       setInputValue(prompt);
       setTimeout(() => {
         handleSendMessage();

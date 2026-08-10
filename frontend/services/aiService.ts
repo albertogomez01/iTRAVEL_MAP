@@ -93,8 +93,10 @@ export const initChat = (preferences: UserPreferences) => {
   const datesStr = preferences.startDate && preferences.endDate 
     ? `\n  - Fechas del viaje: Del ${preferences.startDate} al ${preferences.endDate}` 
     : '';
+  const passengersStr = `\n  - Número de Viajeros / Personas: ${preferences.passengers || 1}`;
+  const tripTypeStr = preferences.tripType ? `\n  - Tipo de Viaje: ${preferences.tripType === 'RoundTrip' ? 'Ida y Vuelta' : 'Solo Ida'}` : '';
 
-  const prefString = `Preferencias del Usuario: ${originStr}
+  const prefString = `Preferencias del Usuario: ${originStr}${tripTypeStr}${passengersStr}
   - Prefiere Trenes/Autobuses Nocturnos en lugar de Hoteles: ${preferences.preferNightTrains ? 'Sí' : 'No'}
   - Estilo de Alojamiento: ${preferences.budgetLevel}
   - Presupuesto Máximo Total: ${preferences.maxBudget}€
