@@ -550,9 +550,9 @@ export default function App() {
         onSaveCurrentTrip={handleSaveCurrentTrip}
       />
 
-      {/* 5. FLOATING TRANSLUCENT CHAT OVERLAY */}
+      {/* 5. FLOATING TRANSLUCENT CHAT OVERLAY (RIGHT ALIGNED ON DESKTOP) */}
       {isChatOpen && (
-        <div className="fixed inset-x-2 sm:inset-x-4 top-14 sm:top-16 bottom-20 sm:bottom-24 max-w-2xl mx-auto z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+        <div className="fixed inset-x-2 sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-14 sm:top-16 bottom-20 sm:bottom-24 z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
           <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
             <div className="flex items-center gap-2">
               <Sparkles size={15} className="text-brand-400" />
@@ -620,7 +620,7 @@ export default function App() {
       )}
 
       {/* 7. FLOATING BOTTOM CHAT INPUT BAR OVER MAP */}
-      <div className="fixed bottom-2.5 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 w-[95%] sm:w-[92%] max-w-2xl bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-2xl p-1.5 sm:p-2 shadow-2xl flex items-center gap-2 focus-within:border-brand-500 transition-all">
+      <div className={`fixed bottom-2.5 sm:bottom-4 z-30 transition-all bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-2xl p-1.5 sm:p-2 shadow-2xl flex items-center gap-2 focus-within:border-brand-500 ${isChatOpen ? 'w-[95%] sm:w-[460px] md:w-[500px] lg:w-[540px] left-1/2 -translate-x-1/2 sm:left-auto sm:right-4 sm:translate-x-0' : 'w-[95%] sm:w-[92%] max-w-2xl left-1/2 -translate-x-1/2'}`}>
         <textarea
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}

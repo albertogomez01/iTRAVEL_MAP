@@ -550,8 +550,8 @@ export const MapView: React.FC<MapViewProps> = ({
         <ChevronDown size={13} className={`transition-transform duration-200 ${showMobilePanel ? 'rotate-180 text-brand-400' : 'text-slate-400'}`} />
       </button>
 
-      {/* Floating Right Control Panel (Capas, Agrandar Ciudad, Leyenda) */}
-      <div className={`absolute top-26 right-3 sm:top-20 sm:right-4 z-[400] flex flex-col gap-2.5 max-w-[220px] sm:max-w-[210px] ${showMobilePanel ? 'flex' : 'hidden sm:flex'}`}>
+      {/* Floating Left Control Panel on Desktop / Right on Mobile (Capas, Agrandar Ciudad, Leyenda) */}
+      <div className={`absolute top-26 right-3 sm:top-20 sm:left-4 sm:right-auto z-[400] flex flex-col gap-2.5 max-w-[220px] sm:max-w-[210px] ${showMobilePanel ? 'flex' : 'hidden sm:flex'}`}>
         
         {/* 1. Capas del Mapa */}
         <div className="bg-slate-900/95 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
