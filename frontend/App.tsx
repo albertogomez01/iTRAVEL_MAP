@@ -435,7 +435,7 @@ export default function App() {
     }
   };
 
-  const selectedOption = tripPlan?.options.find(o => o.id === selectedOptionId) || null;
+  const selectedOption = tripPlan?.options?.find(o => o.id === selectedOptionId) || tripPlan?.options?.[0] || null;
 
   return (
     <div className="relative h-screen w-full bg-slate-950 overflow-hidden font-sans select-none flex flex-row">

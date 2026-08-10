@@ -284,25 +284,110 @@ const tripPlanSchema = {
 };
 
 const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  // España
   'madrid': { lat: 40.4168, lng: -3.7038 },
   'barcelona': { lat: 41.3851, lng: 2.1734 },
   'sevilla': { lat: 37.3891, lng: -5.9845 },
   'valencia': { lat: 39.4699, lng: -0.3763 },
+  'alicante': { lat: 38.3452, lng: -0.4810 },
+  'alacant': { lat: 38.3452, lng: -0.4810 },
   'málaga': { lat: 36.7213, lng: -4.4214 },
   'malaga': { lat: 36.7213, lng: -4.4214 },
   'bilbao': { lat: 43.2630, lng: -2.9350 },
-  'lisboa': { lat: 38.7223, lng: -9.1393 },
-  'porto': { lat: 41.1579, lng: -8.6291 },
+  'zaragoza': { lat: 41.6488, lng: -0.8891 },
+  'granada': { lat: 37.1773, lng: -3.5986 },
+  'córdoba': { lat: 37.8882, lng: -4.7794 },
+  'cordoba': { lat: 37.8882, lng: -4.7794 },
+  'palma': { lat: 39.5696, lng: 2.6502 },
+  'palma de mallorca': { lat: 39.5696, lng: 2.6502 },
+  'san sebastián': { lat: 43.3183, lng: -1.9812 },
+  'san sebastian': { lat: 43.3183, lng: -1.9812 },
+  'oviedo': { lat: 43.3619, lng: -5.8494 },
+  'santander': { lat: 43.4623, lng: -3.8099 },
+  'santiago de compostela': { lat: 42.8782, lng: -8.5448 },
+  'vigo': { lat: 42.2406, lng: -8.7207 },
+  'a coruña': { lat: 43.3623, lng: -8.4115 },
+  'cadiz': { lat: 36.5271, lng: -6.2886 },
+  'cádiz': { lat: 36.5271, lng: -6.2886 },
+  
+  // Italia
   'roma': { lat: 41.9028, lng: 12.4964 },
+  'venecia': { lat: 45.4408, lng: 12.3155 },
+  'venezia': { lat: 45.4408, lng: 12.3155 },
+  'florencia': { lat: 43.7696, lng: 11.2558 },
+  'firenze': { lat: 43.7696, lng: 11.2558 },
+  'milán': { lat: 45.4642, lng: 9.1900 },
+  'milan': { lat: 45.4642, lng: 9.1900 },
+  'nápoles': { lat: 40.8518, lng: 14.2681 },
+  'napoli': { lat: 40.8518, lng: 14.2681 },
+  'bolonia': { lat: 44.4949, lng: 11.3426 },
+  'bologna': { lat: 44.4949, lng: 11.3426 },
+  'turín': { lat: 45.0703, lng: 7.6869 },
+  'verona': { lat: 45.4384, lng: 10.9916 },
+  'pisa': { lat: 43.7228, lng: 10.4017 },
+  'génova': { lat: 44.4056, lng: 8.9463 },
+  'genova': { lat: 44.4056, lng: 8.9463 },
+
+  // Francia
   'parís': { lat: 48.8566, lng: 2.3522 },
   'paris': { lat: 48.8566, lng: 2.3522 },
+  'niza': { lat: 43.7102, lng: 7.2620 },
+  'nice': { lat: 43.7102, lng: 7.2620 },
+  'marsella': { lat: 43.2965, lng: 5.3698 },
+  'marseille': { lat: 43.2965, lng: 5.3698 },
+  'lyon': { lat: 45.7640, lng: 4.8357 },
+  'burdeos': { lat: 44.8378, lng: -0.5792 },
+  'bordeaux': { lat: 44.8378, lng: -0.5792 },
+  'estrasburgo': { lat: 48.5734, lng: 7.7521 },
+
+  // Portugal & Reino Unido
+  'lisboa': { lat: 38.7223, lng: -9.1393 },
+  'porto': { lat: 41.1579, lng: -8.6291 },
+  'oporto': { lat: 41.1579, lng: -8.6291 },
   'londres': { lat: 51.5074, lng: -0.1278 },
+  'edimburgo': { lat: 55.9533, lng: -3.1883 },
+  'mánchester': { lat: 53.4808, lng: -2.2426 },
+  'dublín': { lat: 53.3498, lng: -6.2603 },
+  'dublin': { lat: 53.3498, lng: -6.2603 },
+
+  // Europa Central & Este
   'berlín': { lat: 52.5200, lng: 13.4050 },
   'berlin': { lat: 52.5200, lng: 13.4050 },
+  'múnich': { lat: 48.1351, lng: 11.5820 },
+  'munich': { lat: 48.1351, lng: 11.5820 },
+  'fráncfort': { lat: 50.1109, lng: 8.6821 },
+  'frankfurt': { lat: 50.1109, lng: 8.6821 },
   'ámsterdam': { lat: 52.3676, lng: 4.9041 },
   'amsterdam': { lat: 52.3676, lng: 4.9041 },
+  'bruselas': { lat: 50.8503, lng: 4.3517 },
+  'brussels': { lat: 50.8503, lng: 4.3517 },
   'viena': { lat: 48.2082, lng: 16.3738 },
-  'praga': { lat: 50.0755, lng: 14.4378 }
+  'vienna': { lat: 48.2082, lng: 16.3738 },
+  'praga': { lat: 50.0755, lng: 14.4378 },
+  'prague': { lat: 50.0755, lng: 14.4378 },
+  'budapest': { lat: 47.4979, lng: 19.0402 },
+  'liubliana': { lat: 46.0569, lng: 14.5058 },
+  'ljubljana': { lat: 46.0569, lng: 14.5058 },
+  'zagreb': { lat: 45.8150, lng: 15.9819 },
+  'split': { lat: 43.5081, lng: 16.4402 },
+  'dubrovnik': { lat: 42.6507, lng: 18.0944 },
+  'bratislava': { lat: 48.1486, lng: 17.1077 },
+  'cracovia': { lat: 50.0647, lng: 19.9450 },
+  'krakow': { lat: 50.0647, lng: 19.9450 },
+  'varsovia': { lat: 52.2297, lng: 21.0122 },
+
+  // Suiza, Escandinavia & Grecia/Turquía
+  'zúrich': { lat: 47.3769, lng: 8.5417 },
+  'zurich': { lat: 47.3769, lng: 8.5417 },
+  'ginebra': { lat: 46.2044, lng: 6.1432 },
+  'estocolmo': { lat: 59.3293, lng: 18.0686 },
+  'copenhague': { lat: 55.6761, lng: 12.5683 },
+  'oslo': { lat: 59.9139, lng: 10.7522 },
+  'helsinki': { lat: 60.1699, lng: 24.9384 },
+  'atenas': { lat: 37.9838, lng: 23.7275 },
+  'athens': { lat: 37.9838, lng: 23.7275 },
+  'estambul': { lat: 41.0082, lng: 28.9784 },
+  'istanbul': { lat: 41.0082, lng: 28.9784 }
 };
 
 export const getCityCoordinates = (cityName: string): { lat: number; lng: number } | null => {
@@ -332,8 +417,13 @@ export const enrichTripPlanCoordinates = (plan: TripPlan, preferences?: UserPref
     originCoordinates: originCoords,
     options: plan.options.map(option => {
       const days = (option.days || []).map((day, dIdx) => {
-        const baseLat = day.coordinates?.lat || 48.8566;
-        const baseLng = day.coordinates?.lng || 2.3522;
+        const cityCoords = getCityCoordinates(day.location);
+        const baseLat = (typeof day.coordinates?.lat === 'number' && day.coordinates.lat !== 0) 
+          ? day.coordinates.lat 
+          : (cityCoords?.lat || 48.8566);
+        const baseLng = (typeof day.coordinates?.lng === 'number' && day.coordinates.lng !== 0) 
+          ? day.coordinates.lng 
+          : (cityCoords?.lng || 2.3522);
 
         const normOrigin = plan.origin && plan.origin !== 'Por definir' ? plan.origin.toLowerCase().split(',')[0].trim() : '';
         const normDayLoc = day.location.toLowerCase().split(',')[0].trim();
