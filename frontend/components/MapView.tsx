@@ -54,7 +54,7 @@ const createPoiIcon = (name: string, category: string) => {
 // Custom Zoom Control Buttons inside Leaflet context
 const MapZoomButtons: React.FC<{ onZoomIn: () => void; onZoomOut: () => void }> = ({ onZoomIn, onZoomOut }) => {
   return (
-    <div className="absolute bottom-6 left-3 sm:bottom-6 sm:left-4 z-[500] flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-2xl text-white">
+    <div className="absolute bottom-20 left-3 sm:bottom-6 sm:left-4 z-30 flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-2xl text-white">
       <button
         onClick={onZoomIn}
         className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-brand-500 text-white flex items-center justify-center font-bold text-lg transition-colors active:scale-95"
@@ -176,8 +176,8 @@ export const MapView: React.FC<MapViewProps> = ({
   const [showHotels, setShowHotels] = useState(true);
   const [showPois, setShowPois] = useState(true);
 
-  // Mobile controls overlay toggle (open by default)
-  const [showMobilePanel, setShowMobilePanel] = useState(true);
+  // Mobile controls overlay toggle (closed by default on mobile for clean map)
+  const [showMobilePanel, setShowMobilePanel] = useState(false);
 
   // Internal city focus state
   const [internalTarget, setInternalTarget] = useState<MapTarget | null>(null);
@@ -544,7 +544,7 @@ export const MapView: React.FC<MapViewProps> = ({
       {/* Mobile Floating Toggle Button for Capas & Ciudades */}
       <button
         onClick={() => setShowMobilePanel(!showMobilePanel)}
-        className="sm:hidden absolute top-16 right-3 z-[400] bg-slate-900/95 backdrop-blur-md text-white px-3 py-1.5 rounded-2xl border border-slate-800 shadow-2xl flex items-center gap-1.5 text-xs font-semibold active:scale-95"
+        className="sm:hidden absolute top-16 right-3 z-30 bg-slate-900/95 backdrop-blur-md text-white px-3 py-1.5 rounded-2xl border border-slate-800 shadow-2xl flex items-center gap-1.5 text-xs font-semibold active:scale-95"
       >
         <Layers size={13} className="text-brand-400" />
         <span>Opciones Mapa</span>
@@ -552,7 +552,7 @@ export const MapView: React.FC<MapViewProps> = ({
       </button>
 
       {/* Floating Left Control Panel (Capas, Agrandar Ciudad, Leyenda) */}
-      <div className={`absolute top-16 right-3 sm:top-4 sm:left-4 sm:right-auto z-[500] flex flex-col gap-2.5 max-w-[220px] sm:max-w-[210px] ${showMobilePanel ? 'flex' : 'hidden sm:flex'}`}>
+      <div className={`absolute top-26 right-3 sm:top-4 sm:left-4 sm:right-auto z-30 flex flex-col gap-2.5 max-w-[220px] sm:max-w-[210px] ${showMobilePanel ? 'flex' : 'hidden sm:flex'}`}>
         
         {/* 1. Capas del Mapa */}
         <div className="bg-slate-900/95 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">

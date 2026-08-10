@@ -467,14 +467,14 @@ export default function App() {
 
       {/* FLOATING NON-INTRUSIVE AI THINKING INDICATOR */}
       {(isLoading || isUpdatingItinerary) && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[500] bg-slate-900/95 text-white backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-brand-500/40 shadow-2xl flex items-center gap-3 animate-fade-in">
-          <div className="relative flex items-center justify-center">
-            <Loader2 size={18} className="animate-spin text-brand-400" />
-            <Sparkles size={10} className="absolute text-emerald-400" />
+        <div className="fixed top-16 sm:top-5 left-1/2 -translate-x-1/2 z-[500] bg-slate-900/95 text-white backdrop-blur-xl px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl border border-brand-500/40 shadow-2xl flex items-center gap-2.5 sm:gap-3 animate-fade-in max-w-[90vw]">
+          <div className="relative flex items-center justify-center shrink-0">
+            <Loader2 size={16} className="animate-spin text-brand-400" />
+            <Sparkles size={9} className="absolute text-emerald-400" />
           </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-white tracking-wide">Copiloto IA en acción...</span>
-            <span className="text-[10px] text-slate-300">Buscando información en tiempo real y organizando tu viaje</span>
+          <div className="flex flex-col overflow-hidden">
+            <span className="text-[11px] sm:text-xs font-bold text-white tracking-wide truncate">Copiloto IA en acción...</span>
+            <span className="text-[9px] sm:text-[10px] text-slate-300 truncate">Buscando datos y organizando tu viaje</span>
           </div>
         </div>
       )}
@@ -495,7 +495,71 @@ export default function App() {
         onSaveCurrentTrip={handleSaveCurrentTrip}
       />
 
-      {/* 2. MAIN INTERACTIVE MAP AREA */}
+      {/* 2. UNIFIED MOBILE TOP APP HEADER BAR (MOBILE & TABLET < LG ONLY) */}
+      <div className="fixed top-0 inset-x-0 h-14 z-50 bg-slate-950/95 backdrop-blur-xl border-b border-slate-800 flex items-center justify-between px-2.5 sm:px-4 lg:hidden">
+        {/* Left: Sidebar Trigger & App Logo */}
+        <button 
+          onClick={() => setIsMobileSidebarOpen(true)}
+          className="flex items-center gap-1.5 bg-slate-900/90 text-white p-1.5 px-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 transition-all active:scale-95 cursor-pointer"
+          title="Abrir ajustes de viaje y menú"
+        >
+          <Menu size={17} className="text-brand-400 shrink-0" />
+          <img src="/logo.png" alt="Logo" className="w-4 h-4 rounded-md object-cover border border-teal-500/40 shrink-0" />
+          <span className="font-bold text-[11px] tracking-tight hidden min-[350px]:inline">iTRAVEL</span>
+        </button>
+
+        {/* Right: Modern Segmented Tab Switcher */}
+        <div className="flex items-center gap-1">
+          <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-xl p-0.5 flex items-center gap-0.5">
+            <button
+              onClick={() => {
+                setIsChatOpen(true);
+                setIsItineraryOpen(false);
+              }}
+              className={`px-2 py-1 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 transition-all ${isChatOpen ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-300 hover:text-white'}`}
+            >
+              <MessageSquare size={12} />
+              <span>Chat</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setIsItineraryOpen(true);
+                setIsChatOpen(false);
+              }}
+              className={`px-2 py-1 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 transition-all relative ${isItineraryOpen ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-300 hover:text-white'}`}
+            >
+              <Calendar size={12} />
+              <span>Ruta</span>
+              {tripPlan?.options && tripPlan.options.length > 0 && (
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
+              )}
+            </button>
+
+            <button
+              onClick={() => {
+                setIsChatOpen(false);
+                setIsItineraryOpen(false);
+              }}
+              className={`px-2 py-1 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 transition-all ${!isChatOpen && !isItineraryOpen ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
+              title="Ver mapa despejado"
+            >
+              <MapIcon size={12} />
+              <span>Mapa</span>
+            </button>
+          </div>
+
+          <button
+            onClick={handleShareApp}
+            className={`p-1.5 rounded-xl text-xs font-semibold flex items-center justify-center transition-all border border-slate-800 ${isCopied ? 'bg-emerald-600 text-white' : 'bg-slate-900/90 text-slate-300 hover:text-white'}`}
+            title="Compartir enlace de la aplicación"
+          >
+            {isCopied ? <Check size={14} className="text-emerald-300" /> : <Share2 size={14} />}
+          </button>
+        </div>
+      </div>
+
+      {/* 3. MAIN INTERACTIVE MAP AREA */}
       <div className="relative flex-1 h-full overflow-hidden z-0">
         <MapView 
           option={selectedOption} 
@@ -506,9 +570,9 @@ export default function App() {
           onAskCopilot={handleAskCopilot} 
         />
 
-        {/* FLOATING 3 TRIP OPTIONS SELECTOR BAR ON MAP */}
-        {tripPlan?.options && tripPlan.options.length > 0 && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[450] max-w-[95vw] sm:max-w-2xl w-auto animate-fade-in">
+        {/* FLOATING 3 TRIP OPTIONS SELECTOR BAR ON MAP (ONLY VISIBLE WHEN MAP IS ACTIVE OR ON DESKTOP) */}
+        {tripPlan?.options && tripPlan.options.length > 0 && (!isChatOpen && !isItineraryOpen) && (
+          <div className="absolute top-16 sm:top-4 left-1/2 -translate-x-1/2 z-30 max-w-[94vw] sm:max-w-2xl w-auto animate-fade-in">
             <div className="bg-slate-900/95 text-white backdrop-blur-xl p-1.5 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
               <span className="text-[10px] font-extrabold text-teal-400 uppercase tracking-widest px-2 shrink-0 hidden min-[550px]:inline">
                 Opción:
@@ -522,18 +586,18 @@ export default function App() {
                   <button
                     key={opt.id}
                     onClick={() => setSelectedOptionId(opt.id)}
-                    className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                    className={`px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 sm:gap-2 shrink-0 cursor-pointer ${
                       isSelected 
                         ? 'bg-slate-800 text-white border border-teal-500/70 shadow-lg ring-2 ring-teal-500/30 scale-105' 
                         : 'text-slate-400 hover:text-white hover:bg-slate-800/50 border border-transparent'
                     }`}
                     title={`${opt.title} - ${opt.estimatedBudget}`}
                   >
-                    <span className={`w-2.5 h-2.5 rounded-full ${badgeBg} shrink-0 shadow-sm`} />
-                    <span className="font-bold text-white whitespace-nowrap">
+                    <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${badgeBg} shrink-0 shadow-sm`} />
+                    <span className="font-bold text-white whitespace-nowrap text-[11px] sm:text-xs">
                       {`Opc. ${index + 1}: ${labelText}`}
                     </span>
-                    <span className="text-[10px] font-bold text-teal-300 bg-slate-950/80 px-2 py-0.5 rounded-lg border border-slate-800/80 whitespace-nowrap">
+                    <span className="text-[9.5px] sm:text-[10px] font-bold text-teal-300 bg-slate-950/80 px-1.5 py-0.5 rounded-lg border border-slate-800/80 whitespace-nowrap">
                       {opt.estimatedBudget}
                     </span>
                   </button>
@@ -544,26 +608,15 @@ export default function App() {
         )}
       </div>
 
-      {/* 3. TOP-LEFT HAMBURGER MENU BUTTON (MOBILE / TABLET ONLY) */}
-      <button 
-        onClick={() => setIsMobileSidebarOpen(true)}
-        className="fixed top-2.5 left-2.5 sm:top-4 sm:left-4 z-40 lg:hidden bg-slate-900/90 text-white p-1.5 px-2.5 sm:p-2 sm:px-3 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-1.5 hover:bg-slate-800 transition-all backdrop-blur-md active:scale-95 cursor-pointer"
-        title="Abrir ajustes de viaje y menú"
-      >
-        <Menu size={18} className="text-brand-400 shrink-0" />
-        <img src="/logo.png" alt="Logo" className="w-4 h-4 sm:w-5 sm:h-5 rounded-md object-cover border border-teal-500/40 shrink-0" />
-        <span className="font-bold text-[11px] sm:text-xs tracking-wide hidden min-[360px]:inline">iTRAVEL_MAP</span>
-      </button>
-
-      {/* 3. TOP-RIGHT FLOATING CONTROLS (TABS & USER) */}
-      <div className="fixed top-2.5 right-2.5 sm:top-4 sm:right-4 z-40 flex items-center gap-1.5">
+      {/* 4. TOP-RIGHT FLOATING CONTROLS FOR DESKTOP ONLY (LG Screens) */}
+      <div className="fixed top-4 right-4 z-40 hidden lg:flex items-center gap-1.5">
         <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-1 shadow-2xl flex items-center gap-1">
           <button
             onClick={() => {
               setIsChatOpen(!isChatOpen);
               if (isItineraryOpen) setIsItineraryOpen(false);
             }}
-            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition-all ${isChatOpen ? 'bg-brand-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${isChatOpen ? 'bg-brand-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
           >
             <MessageSquare size={13} />
             <span className="inline">Copiloto</span>
@@ -574,7 +627,7 @@ export default function App() {
               setIsItineraryOpen(!isItineraryOpen);
               if (isChatOpen) setIsChatOpen(false);
             }}
-            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition-all relative ${isItineraryOpen ? 'bg-brand-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all relative ${isItineraryOpen ? 'bg-brand-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
           >
             <Calendar size={13} />
             <span className="inline">Itinerario</span>
@@ -588,25 +641,25 @@ export default function App() {
               setIsChatOpen(false);
               setIsItineraryOpen(false);
             }}
-            className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition-all ${!isChatOpen && !isItineraryOpen ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${!isChatOpen && !isItineraryOpen ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
             title="Ver mapa despejado"
           >
             <MapIcon size={13} />
-            <span className="hidden min-[400px]:inline">Mapa</span>
+            <span>Mapa</span>
           </button>
 
           <button
             onClick={handleShareApp}
-            className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition-all ${isCopied ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
-            title="Compartir enlace de la aplicación con vista previa del logo"
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${isCopied ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+            title="Compartir enlace de la aplicación"
           >
             {isCopied ? <Check size={13} className="text-emerald-300" /> : <Share2 size={13} />}
-            <span className="hidden min-[450px]:inline">{isCopied ? '¡Copiado!' : 'Compartir'}</span>
+            <span>{isCopied ? '¡Copiado!' : 'Compartir'}</span>
           </button>
         </div>
 
         {activeUser && (
-          <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 p-1.5 rounded-2xl shadow-2xl hidden md:flex items-center gap-2">
+          <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 p-1.5 rounded-2xl shadow-2xl flex items-center gap-2">
             {activeUser.photoURL ? (
               <img src={activeUser.photoURL} alt="" className="w-6 h-6 rounded-full border border-brand-500" />
             ) : (
@@ -618,11 +671,9 @@ export default function App() {
         )}
       </div>
 
-
-
-      {/* 5. FLOATING TRANSLUCENT CHAT OVERLAY (RIGHT ALIGNED ON DESKTOP) */}
+      {/* 5. FLOATING TRANSLUCENT CHAT OVERLAY (FULL HEIGHT UNDER HEADER ON MOBILE, FLOATING ON DESKTOP) */}
       {isChatOpen && (
-        <div className="fixed inset-x-2 sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-14 sm:top-16 bottom-20 sm:bottom-24 z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+        <div className="fixed inset-x-2 sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-16 sm:top-16 bottom-[76px] sm:bottom-24 z-40 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
           <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
             <div className="flex items-center gap-2">
               <Sparkles size={15} className="text-brand-400" />
@@ -656,9 +707,9 @@ export default function App() {
         </div>
       )}
 
-      {/* 6. FLOATING TRANSLUCENT ITINERARY OVERLAY (RIGHT ALIGNED - SAME POSITION AS COPILOT) */}
+      {/* 6. FLOATING TRANSLUCENT ITINERARY OVERLAY (FULL HEIGHT UNDER HEADER ON MOBILE, FLOATING ON DESKTOP) */}
       {isItineraryOpen && (
-        <div className="fixed inset-x-2 sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-14 sm:top-16 bottom-20 sm:bottom-24 z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+        <div className="fixed inset-x-2 sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-16 sm:top-16 bottom-3 sm:bottom-24 z-40 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
           <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
             <h2 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
               <Calendar size={15} className="text-brand-400" />
@@ -690,13 +741,16 @@ export default function App() {
       )}
 
       {/* 7. FLOATING BOTTOM CHAT INPUT BAR OVER MAP */}
-      <div className={`fixed bottom-2.5 sm:bottom-4 z-30 transition-all bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-2xl p-1.5 sm:p-2 shadow-2xl flex items-center gap-2 focus-within:border-brand-500 ${isChatOpen ? 'w-[95%] sm:w-[460px] md:w-[500px] lg:w-[540px] left-1/2 -translate-x-1/2 sm:left-auto sm:right-4 sm:translate-x-0' : 'w-[95%] sm:w-[92%] max-w-2xl left-1/2 -translate-x-1/2'}`}>
+      <div className={`fixed bottom-2.5 sm:bottom-4 z-50 transition-all bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl p-1.5 sm:p-2 shadow-2xl flex items-center gap-2 focus-within:border-brand-500 ${isChatOpen ? 'w-[95%] sm:w-[460px] md:w-[500px] lg:w-[540px] left-1/2 -translate-x-1/2 sm:left-auto sm:right-4 sm:translate-x-0' : 'w-[95%] sm:w-[92%] max-w-2xl left-1/2 -translate-x-1/2'}`}>
         <textarea
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => {
-            if (!isChatOpen) setIsChatOpen(true);
+            if (!isChatOpen) {
+              setIsChatOpen(true);
+              setIsItineraryOpen(false);
+            }
           }}
           placeholder="Escribe a dónde quieres ir o pega una URL..."
           className="w-full max-h-24 min-h-[38px] bg-transparent border-none focus:ring-0 resize-none text-xs sm:text-sm py-1.5 px-2.5 text-white placeholder-slate-400"
@@ -709,6 +763,7 @@ export default function App() {
             onClick={() => {
               setInputValue(prev => prev + ' https://');
               setIsChatOpen(true);
+              setIsItineraryOpen(false);
             }}
           >
             <LinkIcon size={17} />
