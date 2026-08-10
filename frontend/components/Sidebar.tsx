@@ -56,6 +56,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [draftPrefs, setDraftPrefs] = useState<UserPreferences>({ ...preferences });
   const [destinationInput, setDestinationInput] = useState('');
 
+  const getTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleStartDateChange = (val: string) => {
+    setDraftPrefs(prev => {
+      const updated = { ...prev, startDate: val };
+      if (prev.tripType !== 'OneWay' && prev.endDate && prev.endDate < val) {
+        updated.endDate = val;
+      }
+      return updated;
+    });
+  };
+
   useEffect(() => {
     setDraftPrefs({ ...preferences });
   }, [preferences]);
@@ -183,29 +201,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Fechas del Viaje */}
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar size={15} className="text-blue-400" />
-                <span className="text-xs font-medium text-slate-300">Fechas del Viaje</span>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Calendar size={15} className="text-blue-400" />
+                  <span className="text-xs font-medium text-slate-300">Fechas del Viaje</span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {draftPrefs.tripType === 'OneWay' ? 'Solo ida' : 'Ida y vuelta'}
+                </span>
               </div>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-400 w-8">Ida:</span>
                   <input 
                     type="date" 
+                    min={getTodayString()}
                     value={draftPrefs.startDate || ''}
-                    onChange={(e) => setDraftPrefs(prev => ({ ...prev, startDate: e.target.value }))}
+                    onChange={(e) => handleStartDateChange(e.target.value)}
                     className="flex-1 bg-slate-800 border border-slate-700 text-xs rounded-xl px-2 py-1.5 focus:outline-none focus:border-brand-500 text-white [color-scheme:dark]"
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-400 w-8">Vta:</span>
-                  <input 
-                    type="date" 
-                    value={draftPrefs.endDate || ''}
-                    onChange={(e) => setDraftPrefs(prev => ({ ...prev, endDate: e.target.value }))}
-                    className="flex-1 bg-slate-800 border border-slate-700 text-xs rounded-xl px-2 py-1.5 focus:outline-none focus:border-brand-500 text-white [color-scheme:dark]"
-                  />
-                </div>
+
+                {draftPrefs.tripType !== 'OneWay' ? (
+                  <div className="flex items-center gap-2 animate-fade-in">
+                    <span className="text-[11px] text-slate-400 w-8">Vta:</span>
+                    <input 
+                      type="date" 
+                      min={draftPrefs.startDate || getTodayString()}
+                      value={draftPrefs.endDate || ''}
+                      onChange={(e) => setDraftPrefs(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="flex-1 bg-slate-800 border border-slate-700 text-xs rounded-xl px-2 py-1.5 focus:outline-none focus:border-brand-500 text-white [color-scheme:dark]"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-[10px] text-slate-400 bg-slate-900/60 p-2 rounded-xl border border-slate-800/80 flex items-center gap-1.5 italic">
+                    <span>➡️ Viaje de Solo Ida. No se requiere fecha de vuelta.</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -307,7 +339,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDraftPrefs(prev => ({ ...prev, tripType: 'OneWay' }))}
+                  onClick={() => setDraftPrefs(prev => ({ ...prev, tripType: 'OneWay', endDate: '' }))}
                   className={`py-1.5 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all border ${(draftPrefs.tripType === 'OneWay') ? 'bg-brand-500/20 text-brand-300 border-brand-500' : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'}`}
                 >
                   ➡️ Solo Ida
