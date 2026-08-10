@@ -30,6 +30,7 @@ interface SidebarProps {
   onLoadTrip?: (trip: SavedTrip) => void;
   onDeleteTrip?: (tripId: string) => void;
   onSaveCurrentTrip?: () => void;
+  onOpenLegalModal?: (tab: 'about' | 'privacy' | 'terms') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -44,7 +45,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   savedTrips = [],
   onLoadTrip,
   onDeleteTrip,
-  onSaveCurrentTrip
+  onSaveCurrentTrip,
+  onOpenLegalModal
 }) => {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [showUndoConfirmModal, setShowUndoConfirmModal] = useState(false);
@@ -389,8 +391,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           </div>
 
-        <div className="p-3 border-t border-slate-800 text-[11px] text-slate-500 text-center">
-          Desarrollado con Google Gemini 3.6 Flash
+        <div className="p-3 border-t border-slate-800 text-[11px] text-slate-400 flex flex-col gap-1.5 items-center text-center">
+          <div className="flex items-center justify-center gap-3 font-medium text-slate-400">
+            <button
+              onClick={() => onOpenLegalModal && onOpenLegalModal('about')}
+              className="hover:text-brand-400 transition-colors cursor-pointer"
+            >
+              Acerca de
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => onOpenLegalModal && onOpenLegalModal('privacy')}
+              className="hover:text-brand-400 transition-colors cursor-pointer"
+            >
+              Privacidad
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => onOpenLegalModal && onOpenLegalModal('terms')}
+              className="hover:text-brand-400 transition-colors cursor-pointer"
+            >
+              Términos
+            </button>
+          </div>
+          <span className="text-[10px] text-slate-500">iTRAVEL_MAP © 2026</span>
         </div>
 
         {/* Modal Confirmación Deshacer */}

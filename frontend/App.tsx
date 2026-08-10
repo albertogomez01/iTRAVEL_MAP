@@ -8,6 +8,7 @@ import { Sidebar, SavedTrip } from './components/Sidebar';
 import { MapView } from './components/MapView';
 import { LoginModal } from './components/LoginModal';
 import { OnboardingGuideModal } from './components/OnboardingGuideModal';
+import { LegalModal, LegalTab } from './components/LegalModal';
 import { AppSplashScreen } from './components/AppSplashScreen';
 import { UpdateNotifier } from './components/UpdateNotifier';
 
@@ -46,7 +47,14 @@ export default function App() {
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(!activeUser);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalTab>('about');
   const [userId] = useState(() => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
+
+  const handleOpenLegalModal = (tab: LegalTab = 'about') => {
+    setLegalModalTab(tab);
+    setIsLegalModalOpen(true);
+  };
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [useAdk, setUseAdk] = useState(false);
 
@@ -490,6 +498,7 @@ export default function App() {
         onLoadTrip={handleLoadTrip}
         onDeleteTrip={handleDeleteTrip}
         onSaveCurrentTrip={handleSaveCurrentTrip}
+        onOpenLegalModal={handleOpenLegalModal}
       />
 
       {/* 2. UNIFIED MOBILE TOP APP HEADER BAR (MOBILE & TABLET < LG ONLY) */}
@@ -787,7 +796,14 @@ export default function App() {
         onClose={handleCloseOnboarding} 
       />
 
-      {/* 10. ANIMATED ENTRY SPLASH SCREEN */}
+      {/* 10. LEGAL & ABOUT MODAL */}
+      <LegalModal 
+        isOpen={isLegalModalOpen} 
+        initialTab={legalModalTab} 
+        onClose={() => setIsLegalModalOpen(false)} 
+      />
+
+      {/* 11. ANIMATED ENTRY SPLASH SCREEN */}
       {showSplash && (
         <AppSplashScreen onFinish={() => setShowSplash(false)} />
       )}
