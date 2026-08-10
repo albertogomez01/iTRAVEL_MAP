@@ -44,6 +44,30 @@ export function generateCurvedPath(
 }
 
 /**
+ * Downsamples a high-density coordinate array to a maximum number of points
+ * to optimize vector rendering performance on Leaflet canvas/SVG.
+ */
+export function downsampleCoordinates(
+  coords: [number, number][],
+  maxPoints: number = 200
+): [number, number][] {
+  if (coords.length <= maxPoints) return coords;
+
+  const result: [number, number][] = [coords[0]];
+  const step = (coords.length - 1) / (maxPoints - 1);
+
+  for (let i = 1; i < maxPoints - 1; i++) {
+    const idx = Math.round(i * step);
+    if (idx < coords.length - 1) {
+      result.push(coords[idx]);
+    }
+  }
+
+  result.push(coords[coords.length - 1]);
+  return result;
+}
+
+/**
  * Fetches real route geometry from OpenStreetMap OSRM API
  * Falls back to curved path on failure, long distance, or flight mode
  */
@@ -85,7 +109,7 @@ export async function getRealisticRoute(
   }
 
   const profile = normalizedMode === 'walk' ? 'foot' : 'driving';
-  const url = `https://router.project-osrm.org/route/v1/${profile}/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=geojson`;
+  const url = `https://router.project-osrm.org/route/v1/${profile}/${lng1},${lat1};${lng2},${lat2}?overview=simplified&geometries=geojson`;
 
   try {
     const controller = new AbortController();
@@ -102,8 +126,9 @@ export async function getRealisticRoute(
         const leafletCoords: [number, number][] = rawCoords.map(([lng, lat]) => [lat, lng]);
         
         if (leafletCoords.length >= 2) {
-          routeCache.set(cacheKey, leafletCoords);
-          return leafletCoords;
+          const optimizedCoords = downsampleCoordinates(leafletCoords, 200);
+          routeCache.set(cacheKey, optimizedCoords);
+          return optimizedCoords;
         }
       }
     }
@@ -116,3 +141,4 @@ export async function getRealisticRoute(
   routeCache.set(cacheKey, fallback);
   return fallback;
 }
+

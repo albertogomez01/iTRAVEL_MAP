@@ -67,7 +67,9 @@
 
         /* Animated Route Line */
         .animated-route {
-            animation: dash 20s linear infinite;
+            animation: dash 25s linear infinite;
+            will-change: stroke-dashoffset;
+            transform: translateZ(0);
         }
         @keyframes dash {
             to {

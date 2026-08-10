@@ -5,30 +5,50 @@ import { ItineraryOption, MapTarget } from '../types';
 import { Loader2, Navigation, Compass, Layers, Bed, Landmark, Coffee, Camera, Eye, EyeOff, MessageSquarePlus, ZoomIn, ZoomOut, Search, Maximize2, MapPin, ChevronDown, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
 import { getRealisticRoute } from '../services/routeService';
 
-// Custom icons
-const createDayIcon = (dayNumber: number) => L.divIcon({
-  className: 'custom-day-icon',
-  html: `<div style="background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 2.5px solid white; box-shadow: 0 4px 14px rgba(13,148,136,0.5);">D${dayNumber}</div>`,
-  iconSize: [34, 34],
-  iconAnchor: [17, 17],
-  popupAnchor: [0, -17]
-});
+// Cached custom icons to avoid rebuilding Leaflet DOM instances on every re-render
+const iconCache = new Map<string, L.DivIcon>();
 
-const createHotelIcon = (name: string) => L.divIcon({
-  className: 'custom-hotel-icon',
-  html: `<div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border-radius: 10px; padding: 4px 8px; display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 11px; border: 2px solid white; box-shadow: 0 4px 12px rgba(79,70,229,0.4); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">🏨 ${name}</div>`,
-  iconSize: [130, 26],
-  iconAnchor: [65, 13],
-  popupAnchor: [0, -13]
-});
+const getDayIcon = (dayNumber: number) => {
+  const key = `day-${dayNumber}`;
+  if (!iconCache.has(key)) {
+    iconCache.set(key, L.divIcon({
+      className: 'custom-day-icon',
+      html: `<div style="background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 2.5px solid white; box-shadow: 0 4px 14px rgba(13,148,136,0.5);">D${dayNumber}</div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+      popupAnchor: [0, -17]
+    }));
+  }
+  return iconCache.get(key)!;
+};
 
-const createOriginIcon = (name: string) => L.divIcon({
-  className: 'custom-origin-icon',
-  html: `<div style="background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: white; border-radius: 12px; padding: 4px 10px; display: flex; align-items: center; gap: 4px; font-weight: bold; font-size: 11.5px; border: 2px solid white; box-shadow: 0 4px 14px rgba(22,163,74,0.5); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">🚩 Origen: ${name}</div>`,
-  iconSize: [140, 28],
-  iconAnchor: [70, 14],
-  popupAnchor: [0, -14]
-});
+const getHotelIcon = (name: string) => {
+  const key = `hotel-${name}`;
+  if (!iconCache.has(key)) {
+    iconCache.set(key, L.divIcon({
+      className: 'custom-hotel-icon',
+      html: `<div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border-radius: 10px; padding: 4px 8px; display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 11px; border: 2px solid white; box-shadow: 0 4px 12px rgba(79,70,229,0.4); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">🏨 ${name}</div>`,
+      iconSize: [130, 26],
+      iconAnchor: [65, 13],
+      popupAnchor: [0, -13]
+    }));
+  }
+  return iconCache.get(key)!;
+};
+
+const getOriginIcon = (name: string) => {
+  const key = `origin-${name}`;
+  if (!iconCache.has(key)) {
+    iconCache.set(key, L.divIcon({
+      className: 'custom-origin-icon',
+      html: `<div style="background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: white; border-radius: 12px; padding: 4px 10px; display: flex; align-items: center; gap: 4px; font-weight: bold; font-size: 11.5px; border: 2px solid white; box-shadow: 0 4px 14px rgba(22,163,74,0.5); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">🚩 Origen: ${name}</div>`,
+      iconSize: [140, 28],
+      iconAnchor: [70, 14],
+      popupAnchor: [0, -14]
+    }));
+  }
+  return iconCache.get(key)!;
+};
 
 const getPoiEmoji = (category: string) => {
   switch (category.toLowerCase()) {
@@ -40,15 +60,19 @@ const getPoiEmoji = (category: string) => {
   }
 };
 
-const createPoiIcon = (name: string, category: string) => {
-  const emoji = getPoiEmoji(category);
-  return L.divIcon({
-    className: 'custom-poi-icon',
-    html: `<div style="background: #ffffff; color: #0f172a; border-radius: 8px; padding: 3.5px 7.5px; display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 11px; border: 2px solid #0d9488; box-shadow: 0 3px 10px rgba(0,0,0,0.2); white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;">${emoji} ${name}</div>`,
-    iconSize: [120, 25],
-    iconAnchor: [60, 12.5],
-    popupAnchor: [0, -12.5]
-  });
+const getPoiIcon = (name: string, category: string) => {
+  const key = `poi-${category}-${name}`;
+  if (!iconCache.has(key)) {
+    const emoji = getPoiEmoji(category);
+    iconCache.set(key, L.divIcon({
+      className: 'custom-poi-icon',
+      html: `<div style="background: #ffffff; color: #0f172a; border-radius: 8px; padding: 3.5px 7.5px; display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 11px; border: 2px solid #0d9488; box-shadow: 0 3px 10px rgba(0,0,0,0.2); white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;">${emoji} ${name}</div>`,
+      iconSize: [120, 25],
+      iconAnchor: [60, 12.5],
+      popupAnchor: [0, -12.5]
+    }));
+  }
+  return iconCache.get(key)!;
 };
 
 // Custom Zoom Control Buttons inside Leaflet context
@@ -80,6 +104,7 @@ const MapController: React.FC<{
   internalTarget?: MapTarget | null;
 }> = ({ coordinates, focusedTarget, internalTarget }) => {
   const map = useMap();
+  const prevTargetKeyRef = React.useRef<string | null>(null);
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -104,16 +129,24 @@ const MapController: React.FC<{
   useEffect(() => {
     const target = internalTarget || focusedTarget;
     if (target && typeof target.lat === 'number' && typeof target.lng === 'number') {
+      const key = `target-${target.lat.toFixed(4)}-${target.lng.toFixed(4)}-${target.zoom || 14}`;
+      if (prevTargetKeyRef.current === key) return;
+      prevTargetKeyRef.current = key;
+
       map.flyTo([target.lat, target.lng], target.zoom || 14, { 
-        duration: 1.5, 
+        duration: 1.2, 
         easeLinearity: 0.25 
       });
     } else if (coordinates.length > 0) {
+      const key = `bounds-${coordinates.map(c => `${c[0].toFixed(3)},${c[1].toFixed(3)}`).join('|')}`;
+      if (prevTargetKeyRef.current === key) return;
+      prevTargetKeyRef.current = key;
+
       const bounds = L.latLngBounds(coordinates);
       map.flyToBounds(bounds, { 
         padding: [60, 60], 
         maxZoom: 12,
-        duration: 1.5,
+        duration: 1.2,
         easeLinearity: 0.25
       });
     }
@@ -430,6 +463,9 @@ export const MapView: React.FC<MapViewProps> = ({
       <MapContainer 
         center={defaultCenter} 
         zoom={4} 
+        preferCanvas={true}
+        zoomSnap={0.5}
+        zoomDelta={0.5}
         className="h-full w-full z-0"
         zoomControl={false}
         whenReady={() => {
@@ -440,9 +476,8 @@ export const MapView: React.FC<MapViewProps> = ({
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          keepBuffer={4}
-          updateWhenIdle={false}
-          updateWhenZooming={true}
+          keepBuffer={3}
+          updateWhenZooming={false}
           eventHandlers={{
             loading: () => setIsTilesLoading(true),
             load: () => setIsTilesLoading(false)
@@ -467,16 +502,18 @@ export const MapView: React.FC<MapViewProps> = ({
               key={`bg-segment-${idx}`}
               positions={seg.positions} 
               color="#0f172a" 
-              weight={8} 
-              opacity={0.6} 
+              weight={7} 
+              smoothFactor={1.5}
+              opacity={0.5} 
             />
             <Polyline 
               key={`segment-${idx}`}
               positions={seg.positions} 
               color={seg.color} 
               weight={5} 
+              smoothFactor={1.5}
               dashArray={seg.mode.toLowerCase() === 'flight' ? '10, 8' : undefined}
-              className="animated-route"
+              className={seg.mode.toLowerCase() === 'flight' ? 'animated-route' : undefined}
               opacity={0.95} 
             />
           </React.Fragment>
@@ -489,14 +526,16 @@ export const MapView: React.FC<MapViewProps> = ({
               key={`bg-local-path-${idx}-${lp.dayNumber}`}
               positions={lp.positions}
               color="#0f172a"
-              weight={5}
-              opacity={0.4}
+              weight={4}
+              smoothFactor={1.5}
+              opacity={0.35}
             />
             <Polyline 
               key={`local-path-${idx}-${lp.dayNumber}`}
               positions={lp.positions}
               color="#f59e0b"
               weight={3}
+              smoothFactor={1.5}
               dashArray="5, 6"
               opacity={0.9}
             />
@@ -507,7 +546,7 @@ export const MapView: React.FC<MapViewProps> = ({
         {originPos && (
           <Marker
             position={originPos}
-            icon={createOriginIcon(origin || 'Origen')}
+            icon={getOriginIcon(origin || 'Origen')}
           />
         )}
 
@@ -516,7 +555,7 @@ export const MapView: React.FC<MapViewProps> = ({
           <Marker 
             key={`day-marker-${idx}-${day.dayNumber}`} 
             position={[day.coordinates!.lat, day.coordinates!.lng]} 
-            icon={createDayIcon(day.dayNumber)}
+            icon={getDayIcon(day.dayNumber)}
           >
             <Popup className="rounded-2xl">
               <div className="font-sans p-1">
@@ -553,7 +592,7 @@ export const MapView: React.FC<MapViewProps> = ({
             <Marker
               key={`hotel-marker-${idx}-${day.dayNumber}`}
               position={[acc.coordinates.lat, acc.coordinates.lng]}
-              icon={createHotelIcon(acc.name)}
+              icon={getHotelIcon(acc.name)}
             >
               <Popup className="rounded-2xl">
                 <div className="font-sans p-1 max-w-xs">
@@ -596,7 +635,7 @@ export const MapView: React.FC<MapViewProps> = ({
               <Marker
                 key={`poi-marker-${day.dayNumber}-${pIdx}`}
                 position={[poi.coordinates.lat, poi.coordinates.lng]}
-                icon={createPoiIcon(poi.name, poi.category)}
+                icon={getPoiIcon(poi.name, poi.category)}
               >
                 <Popup className="rounded-2xl">
                   <div className="font-sans p-1 max-w-xs">
