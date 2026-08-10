@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { ItineraryOption, MapTarget } from '../types';
-import { Loader2, Navigation, Compass, Layers, Bed, Landmark, Coffee, Camera, Eye, EyeOff, MessageSquarePlus } from 'lucide-react';
+import { Loader2, Navigation, Compass, Layers, Bed, Landmark, Coffee, Camera, Eye, EyeOff, MessageSquarePlus, ZoomIn, ZoomOut, Search, Maximize2, MapPin } from 'lucide-react';
 import { getRealisticRoute } from '../services/routeService';
 
 // Custom icons
@@ -16,9 +16,9 @@ const createDayIcon = (dayNumber: number) => L.divIcon({
 
 const createHotelIcon = (name: string) => L.divIcon({
   className: 'custom-hotel-icon',
-  html: `<div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border-radius: 10px; padding: 4px 8px; display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 11px; border: 2px solid white; box-shadow: 0 4px 12px rgba(79,70,229,0.4); white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;">🛌 ${name}</div>`,
-  iconSize: [120, 26],
-  iconAnchor: [60, 13],
+  html: `<div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border-radius: 10px; padding: 4px 8px; display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 11px; border: 2px solid white; box-shadow: 0 4px 12px rgba(79,70,229,0.4); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">🏨 ${name}</div>`,
+  iconSize: [130, 26],
+  iconAnchor: [65, 13],
   popupAnchor: [0, -13]
 });
 
@@ -36,15 +36,41 @@ const createPoiIcon = (name: string, category: string) => {
   const emoji = getPoiEmoji(category);
   return L.divIcon({
     className: 'custom-poi-icon',
-    html: `<div style="background: #ffffff; color: #0f172a; border-radius: 8px; padding: 3px 7px; display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 10.5px; border: 2px solid #0d9488; box-shadow: 0 3px 10px rgba(0,0,0,0.18); white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis;">${emoji} ${name}</div>`,
-    iconSize: [110, 24],
-    iconAnchor: [55, 12],
-    popupAnchor: [0, -12]
+    html: `<div style="background: #ffffff; color: #0f172a; border-radius: 8px; padding: 3.5px 7.5px; display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 11px; border: 2px solid #0d9488; box-shadow: 0 3px 10px rgba(0,0,0,0.2); white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;">${emoji} ${name}</div>`,
+    iconSize: [120, 25],
+    iconAnchor: [60, 12.5],
+    popupAnchor: [0, -12.5]
   });
 };
 
+// Custom Zoom Control Buttons inside Leaflet context
+const MapZoomButtons: React.FC<{ onZoomIn: () => void; onZoomOut: () => void }> = ({ onZoomIn, onZoomOut }) => {
+  return (
+    <div className="absolute top-20 left-4 z-[400] flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-2xl text-white">
+      <button
+        onClick={onZoomIn}
+        className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-brand-500 text-white flex items-center justify-center font-bold text-lg transition-colors active:scale-95"
+        title="Acercar (Zoom +)"
+      >
+        <ZoomIn size={16} />
+      </button>
+      <button
+        onClick={onZoomOut}
+        className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-brand-500 text-white flex items-center justify-center font-bold text-lg transition-colors active:scale-95"
+        title="Alejar (Zoom -)"
+      >
+        <ZoomOut size={16} />
+      </button>
+    </div>
+  );
+};
+
 // Component to handle smooth flyTo / flyToBounds
-const MapController: React.FC<{ coordinates: [number, number][]; focusedTarget?: MapTarget | null }> = ({ coordinates, focusedTarget }) => {
+const MapController: React.FC<{ 
+  coordinates: [number, number][]; 
+  focusedTarget?: MapTarget | null;
+  internalTarget?: MapTarget | null;
+}> = ({ coordinates, focusedTarget, internalTarget }) => {
   const map = useMap();
   
   useEffect(() => {
@@ -68,8 +94,9 @@ const MapController: React.FC<{ coordinates: [number, number][]; focusedTarget?:
   }, [map]);
 
   useEffect(() => {
-    if (focusedTarget && typeof focusedTarget.lat === 'number' && typeof focusedTarget.lng === 'number') {
-      map.flyTo([focusedTarget.lat, focusedTarget.lng], focusedTarget.zoom || 15, { 
+    const target = internalTarget || focusedTarget;
+    if (target && typeof target.lat === 'number' && typeof target.lng === 'number') {
+      map.flyTo([target.lat, target.lng], target.zoom || 14, { 
         duration: 1.5, 
         easeLinearity: 0.25 
       });
@@ -82,8 +109,23 @@ const MapController: React.FC<{ coordinates: [number, number][]; focusedTarget?:
         easeLinearity: 0.25
       });
     }
-  }, [coordinates, focusedTarget, map]);
+  }, [coordinates, focusedTarget, internalTarget, map]);
   
+  return null;
+};
+
+// Helper to handle manual zoom in/out
+const MapActionsController: React.FC<{
+  setZoomInHandler: (fn: () => void) => void;
+  setZoomOutHandler: (fn: () => void) => void;
+}> = ({ setZoomInHandler, setZoomOutHandler }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    setZoomInHandler(() => () => map.zoomIn());
+    setZoomOutHandler(() => () => map.zoomOut());
+  }, [map, setZoomInHandler, setZoomOutHandler]);
+
   return null;
 };
 
@@ -115,6 +157,13 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
   const [showDayPaths, setShowDayPaths] = useState(true);
   const [showHotels, setShowHotels] = useState(true);
   const [showPois, setShowPois] = useState(true);
+
+  // Internal city focus state
+  const [internalTarget, setInternalTarget] = useState<MapTarget | null>(null);
+
+  // Zoom handlers
+  const [zoomInFn, setZoomInFn] = useState<(() => void) | null>(null);
+  const [zoomOutFn, setZoomOutFn] = useState<(() => void) | null>(null);
 
   // Calculated realistic inter-city routes
   const [realisticSegments, setRealisticSegments] = useState<{
@@ -215,10 +264,17 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
         </div>
       )}
 
+      {/* Direct Leaflet Zoom Controls */}
+      <MapZoomButtons 
+        onZoomIn={() => zoomInFn && zoomInFn()} 
+        onZoomOut={() => zoomOutFn && zoomOutFn()} 
+      />
+
       <MapContainer 
         center={defaultCenter} 
         zoom={4} 
         className="h-full w-full z-0"
+        zoomControl={false}
         whenReady={() => {
           setIsMapReady(true);
           setIsTilesLoading(false);
@@ -236,7 +292,16 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
           }}
         />
         
-        <MapController coordinates={mainPositions} focusedTarget={focusedTarget} />
+        <MapController 
+          coordinates={mainPositions} 
+          focusedTarget={focusedTarget} 
+          internalTarget={internalTarget}
+        />
+
+        <MapActionsController 
+          setZoomInHandler={setZoomInFn}
+          setZoomOutHandler={setZoomOutFn}
+        />
         
         {/* 1. Inter-city Realistic OSRM Polylines */}
         {showMainRoutes && realisticSegments.map((seg, idx) => (
@@ -274,8 +339,17 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
               <div className="font-sans p-1">
                 <strong className="text-slate-900 text-sm font-bold block mb-1">Día {day.dayNumber}: {day.location}</strong>
                 {day.theme && <span className="text-xs text-slate-500 block mb-2">{day.theme}</span>}
+                
+                <button
+                  onClick={() => setInternalTarget({ lat: day.coordinates!.lat, lng: day.coordinates!.lng, zoom: 14.5, label: day.location })}
+                  className="w-full text-xs bg-brand-500 hover:bg-brand-600 text-white font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 mb-2 shadow-sm"
+                >
+                  <ZoomIn size={13} />
+                  <span>Agrandar Ciudad y Ver Hoteles</span>
+                </button>
+
                 {day.transport && day.transport.length > 0 && (
-                  <div className="text-xs text-brand-600 font-semibold mt-2 pt-2 border-t border-slate-100 flex items-center gap-1">
+                  <div className="text-xs text-brand-600 font-semibold pt-1 border-t border-slate-100 flex items-center gap-1">
                     <Navigation size={12} />
                     <span>Llegada en {day.transport[0].mode}</span>
                   </div>
@@ -302,16 +376,26 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
                   </div>
                   <strong className="text-slate-900 text-sm font-bold block mb-1">{acc.name}</strong>
                   <span className="text-xs text-slate-600 block mb-1">{acc.location}</span>
-                  {acc.notes && <p className="text-xs text-slate-500 italic border-t border-slate-100 pt-1 mt-1">{acc.notes}</p>}
-                  {onAskCopilot && (
+                  {acc.notes && <p className="text-xs text-slate-500 italic border-t border-slate-100 pt-1 mt-1 mb-2">{acc.notes}</p>}
+                  
+                  <div className="flex gap-1">
                     <button
-                      onClick={() => onAskCopilot(`el hotel ${acc.name} en ${day.location}`)}
-                      className="mt-2 w-full text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                      onClick={() => setInternalTarget({ lat: acc.coordinates!.lat, lng: acc.coordinates!.lng, zoom: 16 })}
+                      className="flex-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
                     >
-                      <MessageSquarePlus size={12} />
-                      <span>Consultar Hotel</span>
+                      <ZoomIn size={12} />
+                      <span>Zoom Hotel</span>
                     </button>
-                  )}
+                    {onAskCopilot && (
+                      <button
+                        onClick={() => onAskCopilot(`el hotel ${acc.name} en ${day.location}`)}
+                        className="flex-1 text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                      >
+                        <MessageSquarePlus size={12} />
+                        <span>Preguntar</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </Popup>
             </Marker>
@@ -341,15 +425,24 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
                         💡 {poi.tips}
                       </div>
                     )}
-                    {onAskCopilot && (
+                    <div className="flex gap-1">
                       <button
-                        onClick={() => onAskCopilot(`el punto de interés ${poi.name} en ${day.location}`)}
-                        className="w-full text-xs bg-teal-50 hover:bg-teal-100 text-teal-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        onClick={() => setInternalTarget({ lat: poi.coordinates!.lat, lng: poi.coordinates!.lng, zoom: 16 })}
+                        className="flex-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
                       >
-                        <MessageSquarePlus size={12} />
-                        <span>Preguntar sobre este lugar</span>
+                        <ZoomIn size={12} />
+                        <span>Zoom Sitio</span>
                       </button>
-                    )}
+                      {onAskCopilot && (
+                        <button
+                          onClick={() => onAskCopilot(`el punto de interés ${poi.name} en ${day.location}`)}
+                          className="flex-1 text-[11px] bg-teal-50 hover:bg-teal-100 text-teal-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          <MessageSquarePlus size={12} />
+                          <span>Preguntar</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </Popup>
               </Marker>
@@ -398,8 +491,42 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
         </button>
       </div>
 
+      {/* Quick City Zoom Toolbar Bar at Bottom Left */}
+      {validDays.length > 0 && (
+        <div className="absolute bottom-20 sm:bottom-6 left-4 z-[400] bg-slate-900/95 text-white backdrop-blur-md p-2 rounded-2xl border border-slate-800 shadow-2xl flex items-center gap-2 max-w-[calc(100vw-2rem)] overflow-x-auto">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-2 pr-1 shrink-0 flex items-center gap-1">
+            <Search size={12} className="text-brand-400" />
+            Agrandar Ciudad:
+          </span>
+          {validDays.map((day, idx) => (
+            <button
+              key={`city-zoom-${idx}`}
+              onClick={() => {
+                if (day.coordinates) {
+                  setInternalTarget({ lat: day.coordinates.lat, lng: day.coordinates.lng, zoom: 14.5, label: day.location });
+                }
+              }}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-brand-500 text-xs font-semibold text-white transition-all shrink-0 flex items-center gap-1.5 border border-slate-700 hover:border-brand-400 active:scale-95"
+            >
+              <span>📍 D{day.dayNumber}: {day.location}</span>
+            </button>
+          ))}
+
+          <button
+            onClick={() => {
+              setInternalTarget(null);
+            }}
+            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition-all shrink-0 flex items-center gap-1 border border-slate-700"
+            title="Ver mapa completo"
+          >
+            <Maximize2 size={12} />
+            <span>Vista General</span>
+          </button>
+        </div>
+      )}
+
       {/* Map Transport Legend */}
-      <div className="absolute bottom-20 right-4 z-[400] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs hidden sm:block">
+      <div className="absolute bottom-20 right-4 z-[400] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs hidden md:block">
         <div className="font-semibold mb-2 text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
           <Compass size={12} className="text-brand-400" />
           Leyenda de Transporte
