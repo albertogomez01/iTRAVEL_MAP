@@ -176,8 +176,8 @@ export const MapView: React.FC<MapViewProps> = ({
   const [showHotels, setShowHotels] = useState(true);
   const [showPois, setShowPois] = useState(true);
 
-  // Mobile controls overlay toggle
-  const [showMobilePanel, setShowMobilePanel] = useState(false);
+  // Mobile controls overlay toggle (open by default)
+  const [showMobilePanel, setShowMobilePanel] = useState(true);
 
   // Internal city focus state
   const [internalTarget, setInternalTarget] = useState<MapTarget | null>(null);
@@ -389,29 +389,12 @@ export const MapView: React.FC<MapViewProps> = ({
           />
         ))}
 
-        {/* 2.5 Origin Marker */}
+        {/* 2.5 Origin Marker (No Popup, simple route anchor) */}
         {originPos && (
           <Marker
             position={originPos}
             icon={createOriginIcon(origin || 'Origen')}
-          >
-            <Popup className="rounded-2xl">
-              <div className="font-sans p-1">
-                <strong className="text-slate-900 text-sm font-bold block mb-1">Punto de Origen: {origin}</strong>
-                <span className="text-xs text-slate-500 block mb-2">Punto de salida del itinerario</span>
-                <button
-                  onClick={() => {
-                    setInternalTarget({ lat: originPos[0], lng: originPos[1], zoom: 13.5, label: origin });
-                    setShowMobilePanel(false);
-                  }}
-                  className="w-full text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                >
-                  <ZoomIn size={13} />
-                  <span>Zoom a Origen</span>
-                </button>
-              </div>
-            </Popup>
-          </Marker>
+          />
         )}
 
         {/* 3. Main Day Center Markers */}
