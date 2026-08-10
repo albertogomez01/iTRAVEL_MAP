@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Loader2, Link as LinkIcon, Menu, MessageSquare, Map as MapIcon, Calendar, ChevronDown, Bookmark, Sparkles, X } from 'lucide-react';
+import { Send, Loader2, Link as LinkIcon, Menu, MessageSquare, Map as MapIcon, Calendar, ChevronDown, Bookmark, Sparkles, X, Share2, Check } from 'lucide-react';
 import { Message, TripPlan, UserPreferences, MapTarget } from './types';
 import { initChat, sendMessageToAgent, extractItineraryState, isAdkConfigured, initAdkSession, streamAdkQuery } from './services/aiService';
 import { ChatMessage } from './components/ChatMessage';
@@ -435,6 +435,28 @@ export default function App() {
     }
   };
 
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleShareApp = async () => {
+    const shareData = {
+      title: 'iTRAVEL_MAP - Tu Copiloto de Viajes con IA',
+      text: 'Planifica tus viajes paso a paso con iTRAVEL_MAP: itinerarios inteligentes, transportes y rutas interactivas en mapa.',
+      url: window.location.href
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // User cancelled or share dismissed
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2500);
+    }
+  };
+
   const selectedOption = tripPlan?.options?.find(o => o.id === selectedOptionId) || tripPlan?.options?.[0] || null;
 
   return (
@@ -571,6 +593,15 @@ export default function App() {
           >
             <MapIcon size={13} />
             <span className="hidden min-[400px]:inline">Mapa</span>
+          </button>
+
+          <button
+            onClick={handleShareApp}
+            className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition-all ${isCopied ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+            title="Compartir enlace de la aplicación con vista previa del logo"
+          >
+            {isCopied ? <Check size={13} className="text-emerald-300" /> : <Share2 size={13} />}
+            <span className="hidden min-[450px]:inline">{isCopied ? '¡Copiado!' : 'Compartir'}</span>
           </button>
         </div>
 
