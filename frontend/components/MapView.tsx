@@ -451,92 +451,99 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
         )}
       </MapContainer>
 
-      {/* Floating Layer Controls */}
-      <div className="absolute top-20 right-4 z-[400] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs hidden sm:flex flex-col gap-2">
-        <div className="font-semibold text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1 mb-1">
-          <Layers size={13} className="text-brand-400" />
-          Capas del Mapa
-        </div>
+      {/* Floating Right Control Panel (Capas, Agrandar Ciudad, Leyenda) */}
+      <div className="absolute top-20 right-4 z-[400] hidden sm:flex flex-col gap-3 max-w-[210px]">
+        
+        {/* 1. Capas del Mapa */}
+        <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
+          <div className="font-semibold text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1 mb-1">
+            <Layers size={13} className="text-brand-400" />
+            Capas del Mapa
+          </div>
 
-        <button 
-          onClick={() => setShowMainRoutes(!showMainRoutes)}
-          className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showMainRoutes ? 'bg-slate-800 text-brand-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
-        >
-          <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Trayectos Tren/Bus</span>
-          {showMainRoutes ? <Eye size={12} /> : <EyeOff size={12} />}
-        </button>
-
-        <button 
-          onClick={() => setShowDayPaths(!showDayPaths)}
-          className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showDayPaths ? 'bg-slate-800 text-amber-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
-        >
-          <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-400"></div> Rutas Urbanas del Día</span>
-          {showDayPaths ? <Eye size={12} /> : <EyeOff size={12} />}
-        </button>
-
-        <button 
-          onClick={() => setShowHotels(!showHotels)}
-          className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showHotels ? 'bg-slate-800 text-indigo-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
-        >
-          <span className="flex items-center gap-1.5">🏨 Hoteles Recomendados</span>
-          {showHotels ? <Eye size={12} /> : <EyeOff size={12} />}
-        </button>
-
-        <button 
-          onClick={() => setShowPois(!showPois)}
-          className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showPois ? 'bg-slate-800 text-teal-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
-        >
-          <span className="flex items-center gap-1.5">🏛️ Sitios a Visitar (POIs)</span>
-          {showPois ? <Eye size={12} /> : <EyeOff size={12} />}
-        </button>
-      </div>
-
-      {/* Quick City Zoom Toolbar Bar at Bottom Left */}
-      {validDays.length > 0 && (
-        <div className="absolute bottom-20 sm:bottom-6 left-4 z-[400] bg-slate-900/95 text-white backdrop-blur-md p-2 rounded-2xl border border-slate-800 shadow-2xl flex items-center gap-2 max-w-[calc(100vw-2rem)] overflow-x-auto">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-2 pr-1 shrink-0 flex items-center gap-1">
-            <Search size={12} className="text-brand-400" />
-            Agrandar Ciudad:
-          </span>
-          {validDays.map((day, idx) => (
-            <button
-              key={`city-zoom-${idx}`}
-              onClick={() => {
-                if (day.coordinates) {
-                  setInternalTarget({ lat: day.coordinates.lat, lng: day.coordinates.lng, zoom: 14.5, label: day.location });
-                }
-              }}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-brand-500 text-xs font-semibold text-white transition-all shrink-0 flex items-center gap-1.5 border border-slate-700 hover:border-brand-400 active:scale-95"
-            >
-              <span>📍 D{day.dayNumber}: {day.location}</span>
-            </button>
-          ))}
-
-          <button
-            onClick={() => {
-              setInternalTarget(null);
-            }}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition-all shrink-0 flex items-center gap-1 border border-slate-700"
-            title="Ver mapa completo"
+          <button 
+            onClick={() => setShowMainRoutes(!showMainRoutes)}
+            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showMainRoutes ? 'bg-slate-800 text-brand-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
           >
-            <Maximize2 size={12} />
-            <span>Vista General</span>
+            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Trayectos Tren/Bus</span>
+            {showMainRoutes ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
+
+          <button 
+            onClick={() => setShowDayPaths(!showDayPaths)}
+            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showDayPaths ? 'bg-slate-800 text-amber-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
+          >
+            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-400"></div> Rutas Urbanas del Día</span>
+            {showDayPaths ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
+
+          <button 
+            onClick={() => setShowHotels(!showHotels)}
+            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showHotels ? 'bg-slate-800 text-indigo-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
+          >
+            <span className="flex items-center gap-1.5">🏨 Hoteles Recomendados</span>
+            {showHotels ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
+
+          <button 
+            onClick={() => setShowPois(!showPois)}
+            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showPois ? 'bg-slate-800 text-teal-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
+          >
+            <span className="flex items-center gap-1.5">🏛️ Sitios a Visitar (POIs)</span>
+            {showPois ? <Eye size={12} /> : <EyeOff size={12} />}
           </button>
         </div>
-      )}
 
-      {/* Map Transport Legend */}
-      <div className="absolute bottom-20 right-4 z-[400] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs hidden md:block">
-        <div className="font-semibold mb-2 text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
-          <Compass size={12} className="text-brand-400" />
-          Leyenda de Transporte
+        {/* 2. Agrandar Ciudad (Debajo de las capas con el mismo formato) */}
+        {validDays.length > 0 && (
+          <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
+            <div className="font-semibold text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1 mb-1">
+              <Search size={13} className="text-brand-400" />
+              Agrandar Ciudad
+            </div>
+
+            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+              {validDays.map((day, idx) => (
+                <button
+                  key={`city-zoom-${idx}`}
+                  onClick={() => {
+                    if (day.coordinates) {
+                      setInternalTarget({ lat: day.coordinates.lat, lng: day.coordinates.lng, zoom: 14.5, label: day.location });
+                    }
+                  }}
+                  className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-[11px] bg-slate-800 hover:bg-brand-500 text-white font-medium active:scale-95 border border-slate-700/60 text-left"
+                >
+                  <span className="truncate">📍 D{day.dayNumber}: {day.location}</span>
+                  <ZoomIn size={12} className="shrink-0 text-brand-300" />
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setInternalTarget(null)}
+              className="mt-0.5 flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 transition-colors border border-slate-700/60"
+              title="Ver mapa completo"
+            >
+              <Maximize2 size={12} />
+              <span>Vista General</span>
+            </button>
+          </div>
+        )}
+
+        {/* 3. Leyenda de Transporte */}
+        <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs">
+          <div className="font-semibold mb-2 text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
+            <Compass size={12} className="text-brand-400" />
+            Leyenda de Transporte
+          </div>
+          <div className="flex flex-col gap-1.5 text-[11px]">
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-red-500 rounded-full"></div> Tren</div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-blue-500 rounded-full"></div> Autobús</div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-green-500 rounded-full"></div> Vuelo</div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-teal-500 rounded-full"></div> Ferry</div>
+          </div>
         </div>
-        <div className="flex flex-col gap-1.5 text-[11px]">
-          <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-red-500 rounded-full"></div> Tren</div>
-          <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-blue-500 rounded-full"></div> Autobús</div>
-          <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-green-500 rounded-full"></div> Vuelo</div>
-          <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-teal-500 rounded-full"></div> Ferry</div>
-        </div>
+
       </div>
     </div>
   );
