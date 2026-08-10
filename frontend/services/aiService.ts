@@ -328,7 +328,11 @@ export const enrichTripPlanCoordinates = (plan: TripPlan, preferences?: UserPref
         const baseLat = day.coordinates?.lat || 48.8566;
         const baseLng = day.coordinates?.lng || 2.3522;
 
-        let enrichedAccommodation = day.accommodation;
+        const normOrigin = plan.origin && plan.origin !== 'Por definir' ? plan.origin.toLowerCase().split(',')[0].trim() : '';
+        const normDayLoc = day.location.toLowerCase().split(',')[0].trim();
+        const isOriginCity = normOrigin.length > 0 && normDayLoc === normOrigin;
+
+        let enrichedAccommodation = isOriginCity ? undefined : day.accommodation;
         if (enrichedAccommodation) {
           if (!enrichedAccommodation.coordinates || typeof enrichedAccommodation.coordinates.lat !== 'number') {
             enrichedAccommodation = {
@@ -341,7 +345,7 @@ export const enrichTripPlanCoordinates = (plan: TripPlan, preferences?: UserPref
           }
         }
 
-        const enrichedPois = (day.pois || []).map((poi, idx) => {
+        const enrichedPois = isOriginCity ? [] : (day.pois || []).map((poi, idx) => {
           if (poi.coordinates && typeof poi.coordinates.lat === 'number' && typeof poi.coordinates.lng === 'number' && (poi.coordinates.lat !== baseLat || poi.coordinates.lng !== baseLng)) {
             return poi;
           }
@@ -418,6 +422,7 @@ REGLAS CRÍTICAS DE RUTAS DE ORIGEN Y REGRESO:
   1. El Día 1 DEBE incluir el trayecto saliendo desde el origen hacia la primera ciudad de destino.
   2. Si el viaje es de 'Ida y Vuelta', el último día DEBE incluir el trayecto de regreso desde la última ciudad hacia la ciudad de origen.
   3. Si es 'Solo Ida', no incluyas el transporte de regreso.
+  4. NO agregues hospedaje (hoteles) ni puntos de interés (POIs) para la ciudad de origen. Toda esa información asignala SOLO a las ciudades de destino.
 - Incluye enlaces de reserva útiles, coordenadas de origen, ciudades, hoteles y POIs.
 
 ${prefContext}
