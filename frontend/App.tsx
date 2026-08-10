@@ -483,6 +483,39 @@ export default function App() {
           focusedTarget={focusedTarget} 
           onAskCopilot={handleAskCopilot} 
         />
+
+        {/* FLOATING 3 TRIP OPTIONS SELECTOR BAR ON MAP */}
+        {tripPlan?.options && tripPlan.options.length > 0 && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[450] max-w-[92vw] sm:max-w-xl w-auto animate-fade-in">
+            <div className="bg-slate-900/95 text-white backdrop-blur-xl p-1.5 sm:p-2 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-1 sm:gap-2 overflow-x-auto">
+              <span className="text-[10px] sm:text-xs font-bold text-teal-400 uppercase tracking-wider px-2 hidden min-[500px]:inline shrink-0">
+                Ver Opción:
+              </span>
+              {tripPlan.options.map((opt, index) => {
+                const isSelected = (selectedOptionId ? opt.id === selectedOptionId : index === 0);
+                const badgeColor = index === 0 ? 'bg-emerald-500' : index === 1 ? 'bg-sky-500' : 'bg-purple-500';
+                
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => setSelectedOptionId(opt.id)}
+                    className={`px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                      isSelected 
+                        ? 'bg-slate-800 text-white border border-teal-500/60 shadow-lg ring-1 ring-teal-400/40 scale-105' 
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${badgeColor} shrink-0`} />
+                    <span className="truncate max-w-[90px] sm:max-w-[130px]">{opt.title}</span>
+                    <span className="text-[10px] text-slate-300 bg-slate-950/80 px-1.5 py-0.5 rounded-md font-semibold border border-slate-800">
+                      {opt.estimatedBudget}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 3. TOP-LEFT HAMBURGER MENU BUTTON (MOBILE / TABLET ONLY) */}

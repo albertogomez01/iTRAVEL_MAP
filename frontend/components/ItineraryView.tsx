@@ -200,13 +200,19 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Opciones de Ruta</h3>
                 
                 <div className="space-y-4">
-                  {tripPlan.options.map((option) => {
-                    const isSelected = option.id === selectedOptionId;
+                  {tripPlan.options.map((option, idx) => {
+                    const isSelected = option.id === selectedOptionId || (!selectedOptionId && idx === 0);
+                    const tagClass = idx === 0 
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                      : idx === 1 
+                        ? 'bg-sky-100 text-sky-800 border-sky-300' 
+                        : 'bg-purple-100 text-purple-800 border-purple-300';
+                    const tagText = idx === 0 ? 'Opción 1 • Económica' : idx === 1 ? 'Opción 2 • Equilibrada' : 'Opción 3 • Rápida';
                     
                     return (
                       <div 
                         key={option.id} 
-                        className={`bg-white rounded-xl border transition-all duration-300 overflow-hidden ${isSelected ? 'border-brand-500 ring-1 ring-brand-500 shadow-md' : 'border-slate-200 hover:border-brand-300 shadow-sm cursor-pointer'}`}
+                        className={`bg-white rounded-xl border transition-all duration-300 overflow-hidden ${isSelected ? 'border-brand-500 ring-2 ring-brand-500/20 shadow-md' : 'border-slate-200 hover:border-brand-300 shadow-sm cursor-pointer'}`}
                       >
                         {/* Tarjeta Resumen */}
                         <div 
@@ -214,6 +220,11 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                           onClick={() => !isSelected && onSelectOption(option.id)}
                         >
                           <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${tagClass}`}>
+                                {tagText}
+                              </span>
+                            </div>
                             <h4 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                               {option.title}
                             </h4>
