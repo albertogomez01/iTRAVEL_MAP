@@ -44,7 +44,7 @@ export const OnboardingGuideModal: React.FC<OnboardingGuideModalProps> = ({ isOp
 
   return (
     <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-white relative overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-2xl text-white relative overflow-y-auto max-h-[92vh]">
         {/* Glow effect */}
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
 

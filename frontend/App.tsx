@@ -462,12 +462,9 @@ export default function App() {
   return (
     <div className="relative h-screen w-full bg-slate-950 overflow-hidden font-sans select-none flex flex-row">
       
-      {/* APP UPDATE NOTIFIER (NEW BUILD DETECTED) */}
-      <UpdateNotifier />
-
-      {/* FLOATING NON-INTRUSIVE AI THINKING INDICATOR */}
+      {/* APP UPDA      {/* FLOATING NON-INTRUSIVE AI THINKING INDICATOR */}
       {(isLoading || isUpdatingItinerary) && (
-        <div className="fixed top-16 sm:top-5 left-1/2 -translate-x-1/2 z-[500] bg-slate-900/95 text-white backdrop-blur-xl px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl border border-brand-500/40 shadow-2xl flex items-center gap-2.5 sm:gap-3 animate-fade-in max-w-[90vw]">
+        <div className="fixed top-16 landscape:top-12 sm:top-5 left-1/2 -translate-x-1/2 z-[500] bg-slate-900/95 text-white backdrop-blur-xl px-4 py-1.5 sm:px-5 sm:py-2.5 rounded-2xl border border-brand-500/40 shadow-2xl flex items-center gap-2.5 sm:gap-3 animate-fade-in max-w-[90vw]">
           <div className="relative flex items-center justify-center shrink-0">
             <Loader2 size={16} className="animate-spin text-brand-400" />
             <Sparkles size={9} className="absolute text-emerald-400" />
@@ -496,7 +493,7 @@ export default function App() {
       />
 
       {/* 2. UNIFIED MOBILE TOP APP HEADER BAR (MOBILE & TABLET < LG ONLY) */}
-      <div className="fixed top-0 inset-x-0 h-14 z-50 bg-slate-950/95 backdrop-blur-xl border-b border-slate-800 flex items-center justify-between px-2.5 sm:px-4 lg:hidden">
+      <div className="fixed top-0 inset-x-0 h-14 landscape:h-11 z-50 bg-slate-950/95 backdrop-blur-xl border-b border-slate-800 flex items-center justify-between px-2.5 sm:px-4 lg:hidden">
         {/* Left: Sidebar Trigger & App Logo */}
         <button 
           onClick={() => setIsMobileSidebarOpen(true)}
@@ -572,7 +569,7 @@ export default function App() {
 
         {/* FLOATING 3 TRIP OPTIONS SELECTOR BAR ON MAP (ONLY VISIBLE WHEN MAP IS ACTIVE OR ON DESKTOP) */}
         {tripPlan?.options && tripPlan.options.length > 0 && (!isChatOpen && !isItineraryOpen) && (
-          <div className="absolute top-16 sm:top-4 left-1/2 -translate-x-1/2 z-30 max-w-[94vw] sm:max-w-2xl w-auto animate-fade-in">
+          <div className="absolute top-16 landscape:top-12 sm:top-4 left-1/2 -translate-x-1/2 z-30 max-w-[94vw] sm:max-w-2xl w-auto animate-fade-in">
             <div className="bg-slate-900/95 text-white backdrop-blur-xl p-1.5 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
               <span className="text-[10px] font-extrabold text-teal-400 uppercase tracking-widest px-2 shrink-0 hidden min-[550px]:inline">
                 Opción:
@@ -625,7 +622,7 @@ export default function App() {
           <button
             onClick={() => {
               setIsItineraryOpen(!isItineraryOpen);
-              if (isChatOpen) setIsChatOpen(false);
+              if (isChatOpen) setIsItineraryOpen(false);
             }}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all relative ${isItineraryOpen ? 'bg-brand-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
           >
@@ -671,9 +668,9 @@ export default function App() {
         )}
       </div>
 
-      {/* 5. FLOATING TRANSLUCENT CHAT OVERLAY (FULL HEIGHT UNDER HEADER ON MOBILE, FLOATING ON DESKTOP) */}
+      {/* 5. FLOATING TRANSLUCENT CHAT OVERLAY (RIGHT SIDE ON LANDSCAPE & DESKTOP) */}
       {isChatOpen && (
-        <div className="fixed inset-x-2 sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-16 sm:top-16 bottom-[76px] sm:bottom-24 z-40 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+        <div className="fixed inset-x-2 landscape:left-auto landscape:right-2 landscape:w-[50vw] sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-16 landscape:top-12 sm:top-16 bottom-[76px] landscape:bottom-[54px] sm:bottom-24 z-40 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-3xl landscape:rounded-2xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
           <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
             <div className="flex items-center gap-2">
               <Sparkles size={15} className="text-brand-400" />
@@ -707,9 +704,9 @@ export default function App() {
         </div>
       )}
 
-      {/* 6. FLOATING TRANSLUCENT ITINERARY OVERLAY (FULL HEIGHT UNDER HEADER ON MOBILE, FLOATING ON DESKTOP) */}
+      {/* 6. FLOATING TRANSLUCENT ITINERARY OVERLAY (RIGHT SIDE ON LANDSCAPE & DESKTOP) */}
       {isItineraryOpen && (
-        <div className="fixed inset-x-2 sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-16 sm:top-16 bottom-3 sm:bottom-24 z-40 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+        <div className="fixed inset-x-2 landscape:left-auto landscape:right-2 landscape:w-[50vw] sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-16 landscape:top-12 sm:top-16 bottom-3 landscape:bottom-2 sm:bottom-24 z-40 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-3xl landscape:rounded-2xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
           <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
             <h2 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
               <Calendar size={15} className="text-brand-400" />
@@ -741,7 +738,7 @@ export default function App() {
       )}
 
       {/* 7. FLOATING BOTTOM CHAT INPUT BAR OVER MAP */}
-      <div className={`fixed bottom-2.5 sm:bottom-4 z-50 transition-all bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl p-1.5 sm:p-2 shadow-2xl flex items-center gap-2 focus-within:border-brand-500 ${isChatOpen ? 'w-[95%] sm:w-[460px] md:w-[500px] lg:w-[540px] left-1/2 -translate-x-1/2 sm:left-auto sm:right-4 sm:translate-x-0' : 'w-[95%] sm:w-[92%] max-w-2xl left-1/2 -translate-x-1/2'}`}>
+      <div className={`fixed bottom-2.5 landscape:bottom-1.5 sm:bottom-4 z-50 transition-all bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl p-1.5 sm:p-2 shadow-2xl flex items-center gap-2 focus-within:border-brand-500 ${isChatOpen ? 'w-[95%] landscape:w-[50vw] sm:w-[460px] md:w-[500px] lg:w-[540px] left-1/2 -translate-x-1/2 landscape:left-auto landscape:right-2 landscape:translate-x-0 sm:left-auto sm:right-4 sm:translate-x-0' : 'w-[95%] sm:w-[92%] max-w-2xl left-1/2 -translate-x-1/2'}`}>
         <textarea
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
