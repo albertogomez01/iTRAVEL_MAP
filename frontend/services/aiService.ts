@@ -387,7 +387,40 @@ const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
   'atenas': { lat: 37.9838, lng: 23.7275 },
   'athens': { lat: 37.9838, lng: 23.7275 },
   'estambul': { lat: 41.0082, lng: 28.9784 },
-  'istanbul': { lat: 41.0082, lng: 28.9784 }
+  'istanbul': { lat: 41.0082, lng: 28.9784 },
+
+  // América
+  'nueva york': { lat: 40.7128, lng: -74.0060 },
+  'new york': { lat: 40.7128, lng: -74.0060 },
+  'los ángeles': { lat: 34.0522, lng: -118.2437 },
+  'los angeles': { lat: 34.0522, lng: -118.2437 },
+  'miami': { lat: 25.7617, lng: -80.1918 },
+  'méxico': { lat: 19.4326, lng: -99.1332 },
+  'ciudad de méxico': { lat: 19.4326, lng: -99.1332 },
+  'buenos aires': { lat: -34.6037, lng: -58.3816 },
+  'río de janeiro': { lat: -22.9068, lng: -43.1729 },
+  'rio de janeiro': { lat: -22.9068, lng: -43.1729 },
+  'bogotá': { lat: 4.7110, lng: -74.0721 },
+  'lima': { lat: -12.0464, lng: -77.0428 },
+  'santiago': { lat: -33.4489, lng: -70.6693 },
+  'toronto': { lat: 43.6532, lng: -79.3832 },
+
+  // Asia, África & Oceanía
+  'tokio': { lat: 35.6762, lng: 139.6503 },
+  'tokyo': { lat: 35.6762, lng: 139.6503 },
+  'kioto': { lat: 35.0116, lng: 135.7681 },
+  'kyoto': { lat: 35.0116, lng: 135.7681 },
+  'seúl': { lat: 37.5665, lng: 126.9780 },
+  'seoul': { lat: 37.5665, lng: 126.9780 },
+  'pekin': { lat: 39.9042, lng: 116.4074 },
+  'beijing': { lat: 39.9042, lng: 116.4074 },
+  'bangkok': { lat: 13.7563, lng: 100.5018 },
+  'singapur': { lat: 1.3521, lng: 103.8198 },
+  'dubai': { lat: 25.2048, lng: 55.2708 },
+  'el cairo': { lat: 30.0444, lng: 31.2357 },
+  'cairo': { lat: 30.0444, lng: 31.2357 },
+  'sídney': { lat: -33.8688, lng: 151.2093 },
+  'sydney': { lat: -33.8688, lng: 151.2093 }
 };
 
 export const getCityCoordinates = (cityName: string): { lat: number; lng: number } | null => {
@@ -396,87 +429,111 @@ export const getCityCoordinates = (cityName: string): { lat: number; lng: number
   return CITY_COORDINATES[clean] || null;
 };
 
-export const enrichTripPlanCoordinates = (plan: TripPlan, preferences?: UserPreferences): TripPlan => {
+// Async Nominatim OpenStreetMap Geocoder for any city/town in the world
+export const getCityCoordinatesAsync = async (cityName: string): Promise<{ lat: number; lng: number } | null> => {
+  if (!cityName) return null;
+  const clean = cityName.toLowerCase().split(',')[0].trim();
+  if (CITY_COORDINATES[clean]) return CITY_COORDINATES[clean];
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(clean)}&limit=1`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'es,en' } });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data[0] && data[0].lat && data[0].lon) {
+        const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        CITY_COORDINATES[clean] = coords;
+        return coords;
+      }
+    }
+  } catch (e) {
+    console.warn(`Error al geocodificar la ciudad '${cityName}':`, e);
+  }
+  return null;
+};
+
+export const enrichTripPlanCoordinatesAsync = async (plan: TripPlan, preferences?: UserPreferences): Promise<TripPlan> => {
   if (!plan || !plan.options) return plan;
 
   // Resolve origin coordinates
   let originCoords = plan.originCoordinates;
-  if (!originCoords || typeof originCoords.lat !== 'number') {
+  if (!originCoords || typeof originCoords.lat !== 'number' || originCoords.lat === 0) {
     if (preferences?.originLocation) {
-      originCoords = getCityCoordinates(preferences.originLocation) || undefined;
+      originCoords = (await getCityCoordinatesAsync(preferences.originLocation)) || undefined;
     }
     if (!originCoords && plan.origin && plan.origin !== 'Por definir') {
-      originCoords = getCityCoordinates(plan.origin) || undefined;
+      originCoords = (await getCityCoordinatesAsync(plan.origin)) || undefined;
     }
   }
 
   const isRoundTrip = !preferences?.tripType || preferences.tripType === 'RoundTrip';
 
-  return {
-    ...plan,
-    originCoordinates: originCoords,
-    options: plan.options.map(option => {
-      const days = (option.days || []).map((day, dIdx) => {
-        const cityCoords = getCityCoordinates(day.location);
-        const baseLat = (typeof day.coordinates?.lat === 'number' && day.coordinates.lat !== 0) 
-          ? day.coordinates.lat 
-          : (cityCoords?.lat || 48.8566);
-        const baseLng = (typeof day.coordinates?.lng === 'number' && day.coordinates.lng !== 0) 
-          ? day.coordinates.lng 
-          : (cityCoords?.lng || 2.3522);
+  const enrichedOptions = await Promise.all(
+    plan.options.map(async option => {
+      const days = await Promise.all(
+        (option.days || []).map(async (day, dIdx) => {
+          let baseLat = day.coordinates?.lat;
+          let baseLng = day.coordinates?.lng;
 
-        const normOrigin = plan.origin && plan.origin !== 'Por definir' ? plan.origin.toLowerCase().split(',')[0].trim() : '';
-        const normDayLoc = day.location.toLowerCase().split(',')[0].trim();
-        const isOriginCity = normOrigin.length > 0 && normDayLoc === normOrigin;
+          if (!baseLat || !baseLng || baseLat === 0 || baseLng === 0) {
+            const fetchedCoords = await getCityCoordinatesAsync(day.location);
+            baseLat = fetchedCoords?.lat || 48.8566;
+            baseLng = fetchedCoords?.lng || 2.3522;
+          }
 
-        let enrichedAccommodation = isOriginCity ? undefined : day.accommodation;
-        if (enrichedAccommodation) {
-          if (!enrichedAccommodation.coordinates || typeof enrichedAccommodation.coordinates.lat !== 'number') {
-            enrichedAccommodation = {
-              ...enrichedAccommodation,
+          const normOrigin = plan.origin && plan.origin !== 'Por definir' ? plan.origin.toLowerCase().split(',')[0].trim() : '';
+          const normDayLoc = day.location.toLowerCase().split(',')[0].trim();
+          const isOriginCity = normOrigin.length > 0 && normDayLoc === normOrigin;
+
+          let enrichedAccommodation = isOriginCity ? undefined : day.accommodation;
+          if (enrichedAccommodation) {
+            if (!enrichedAccommodation.coordinates || typeof enrichedAccommodation.coordinates.lat !== 'number' || enrichedAccommodation.coordinates.lat === 0) {
+              enrichedAccommodation = {
+                ...enrichedAccommodation,
+                coordinates: {
+                  lat: Number((baseLat + 0.0055).toFixed(5)),
+                  lng: Number((baseLng + 0.0045).toFixed(5))
+                }
+              };
+            }
+          }
+
+          const enrichedPois = isOriginCity ? [] : (day.pois || []).map((poi, idx) => {
+            if (poi.coordinates && typeof poi.coordinates.lat === 'number' && typeof poi.coordinates.lng === 'number' && poi.coordinates.lat !== 0 && (poi.coordinates.lat !== baseLat || poi.coordinates.lng !== baseLng)) {
+              return poi;
+            }
+            const angle = idx * 1.8 + 0.5;
+            const radius = 0.006 + (idx * 0.0035);
+            return {
+              ...poi,
               coordinates: {
-                lat: Number((baseLat + 0.0055).toFixed(5)),
-                lng: Number((baseLng + 0.0045).toFixed(5))
+                lat: Number((baseLat + radius * Math.cos(angle)).toFixed(5)),
+                lng: Number((baseLng + radius * Math.sin(angle)).toFixed(5))
               }
             };
-          }
-        }
+          });
 
-        const enrichedPois = isOriginCity ? [] : (day.pois || []).map((poi, idx) => {
-          if (poi.coordinates && typeof poi.coordinates.lat === 'number' && typeof poi.coordinates.lng === 'number' && (poi.coordinates.lat !== baseLat || poi.coordinates.lng !== baseLng)) {
-            return poi;
-          }
-          const angle = idx * 1.8 + 0.5;
-          const radius = 0.006 + (idx * 0.0035);
-          return {
-            ...poi,
-            coordinates: {
-              lat: Number((baseLat + radius * Math.cos(angle)).toFixed(5)),
-              lng: Number((baseLng + radius * Math.sin(angle)).toFixed(5))
+          // Ensure Day 1 transport has from = origin if specified
+          let transport = [...(day.transport || [])];
+          if (dIdx === 0 && plan.origin && plan.origin !== 'Por definir' && transport.length > 0) {
+            if (transport[0].from !== plan.origin) {
+              transport[0] = {
+                ...transport[0],
+                from: plan.origin,
+                to: day.location
+              };
             }
-          };
-        });
-
-        // Ensure Day 1 transport has from = origin if specified
-        let transport = [...(day.transport || [])];
-        if (dIdx === 0 && plan.origin && plan.origin !== 'Por definir' && transport.length > 0) {
-          if (transport[0].from !== plan.origin) {
-            transport[0] = {
-              ...transport[0],
-              from: plan.origin,
-              to: day.location
-            };
           }
-        }
 
-        return {
-          ...day,
-          coordinates: { lat: baseLat, lng: baseLng },
-          transport,
-          accommodation: enrichedAccommodation,
-          pois: enrichedPois
-        };
-      });
+          return {
+            ...day,
+            coordinates: { lat: baseLat, lng: baseLng },
+            transport,
+            accommodation: enrichedAccommodation,
+            pois: enrichedPois
+          };
+        })
+      );
 
       // Ensure return leg on last day if RoundTrip and origin is set
       if (isRoundTrip && plan.origin && plan.origin !== 'Por definir' && days.length > 0) {
@@ -499,6 +556,12 @@ export const enrichTripPlanCoordinates = (plan: TripPlan, preferences?: UserPref
         days
       };
     })
+  );
+
+  return {
+    ...plan,
+    originCoordinates: originCoords,
+    options: enrichedOptions
   };
 };
 
@@ -546,7 +609,7 @@ ${chatHistoryText}`;
       if (!jsonStr) continue;
       
       const parsedPlan = JSON.parse(jsonStr) as TripPlan;
-      return enrichTripPlanCoordinates(parsedPlan, preferences);
+      return await enrichTripPlanCoordinatesAsync(parsedPlan, preferences);
     } catch (error: any) {
       console.warn(`Error extrayendo itinerario con modelo ${model}:`, error?.message || error);
     }
