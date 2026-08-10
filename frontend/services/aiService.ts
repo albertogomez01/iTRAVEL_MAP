@@ -82,6 +82,8 @@ const CANDIDATE_MODELS = [
 let activeModelIndex = 0;
 let lastPreferences: UserPreferences | null = null;
 
+const CACHE_VERSION = 'cache_v1';
+
 // In-memory & LocalStorage Caches to minimize Gemini API calls & GCP costs
 const chatResponseCache = new Map<string, { text: string; groundingChunks?: any[] }>();
 const itineraryStateCache = new Map<string, TripPlan>();
@@ -89,7 +91,7 @@ const itineraryStateCache = new Map<string, TripPlan>();
 const getCacheKey = (prompt: string, prefs?: UserPreferences | null): string => {
   const normPrompt = prompt.trim().toLowerCase();
   const prefStr = prefs ? `${prefs.originLocation}_${prefs.maxBudget}_${prefs.passengers}_${prefs.tripType}_${prefs.pace}` : '';
-  return `${normPrompt}___${prefStr}`;
+  return `${CACHE_VERSION}___${normPrompt}___${prefStr}`;
 };
 
 export const initChat = (preferences: UserPreferences) => {
