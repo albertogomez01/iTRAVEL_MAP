@@ -438,7 +438,193 @@ export const MapView: React.FC<MapViewProps> = ({
             </Popup>
           </Marker>
         ))}
+
+        {/* 4. Hotel / Accommodation Markers */}
+        {showHotels && validDays.map((day, idx) => {
+          if (!day.accommodation?.coordinates) return null;
+          const acc = day.accommodation;
+          return (
+            <Marker
+              key={`hotel-marker-${idx}-${day.dayNumber}`}
+              position={[acc.coordinates.lat, acc.coordinates.lng]}
+              icon={createHotelIcon(acc.name)}
+            >
+              <Popup className="rounded-2xl">
+                <div className="font-sans p-1 max-w-xs">
+                  <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                    <Bed size={12} /> Hotel Recomendado (Día {day.dayNumber})
+                  </div>
+                  <strong className="text-slate-900 text-sm font-bold block mb-1">{acc.name}</strong>
+                  <span className="text-xs text-slate-600 block mb-1">{acc.location}</span>
+                  {acc.notes && <p className="text-xs text-slate-500 italic border-t border-slate-100 pt-1 mt-1 mb-2">{acc.notes}</p>}
+                  
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setInternalTarget({ lat: acc.coordinates!.lat, lng: acc.coordinates!.lng, zoom: 16 })}
+                      className="flex-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                    >
+                      <ZoomIn size={12} />
+                      <span>Zoom Hotel</span>
+                    </button>
+                    {onAskCopilot && (
+                      <button
+                        onClick={() => onAskCopilot(`el hotel ${acc.name} en ${day.location}`)}
+                        className="flex-1 text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                      >
+                        <MessageSquarePlus size={12} />
+                        <span>Preguntar</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {/* 5. POI Markers (Monuments, Restaurants, Museums, Nature) */}
+        {showPois && validDays.map((day) => 
+          (day.pois || []).map((poi, pIdx) => {
+            if (!poi.coordinates) return null;
+            return (
+              <Marker
+                key={`poi-marker-${day.dayNumber}-${pIdx}`}
+                position={[poi.coordinates.lat, poi.coordinates.lng]}
+                icon={createPoiIcon(poi.name, poi.category)}
+              >
+                <Popup className="rounded-2xl">
+                  <div className="font-sans p-1 max-w-xs">
+                    <div className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                      <span>{getPoiEmoji(poi.category)}</span>
+                      <span>{poi.category} • Día {day.dayNumber}</span>
+                    </div>
+                    <strong className="text-slate-900 text-sm font-bold block mb-1">{poi.name}</strong>
+                    <p className="text-xs text-slate-600 mb-1">{poi.description}</p>
+                    {poi.tips && (
+                      <div className="text-[11px] text-amber-700 bg-amber-50 p-1.5 rounded-lg border border-amber-100 italic mb-2">
+                        💡 {poi.tips}
+                      </div>
+                    )}
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setInternalTarget({ lat: poi.coordinates!.lat, lng: poi.coordinates!.lng, zoom: 16 })}
+                        className="flex-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                      >
+                        <ZoomIn size={12} />
+                        <span>Zoom Sitio</span>
+                      </button>
+                      {onAskCopilot && (
+                        <button
+                          onClick={() => onAskCopilot(`el punto de interés ${poi.name} en ${day.location}`)}
+                          className="flex-1 text-[11px] bg-teal-50 hover:bg-teal-100 text-teal-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          <MessageSquarePlus size={12} />
+                          <span>Preguntar</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })
+        )}
       </MapContainer>
+
+      {/* Floating Right Control Panel (Capas, Agrandar Ciudad, Leyenda) */}
+      <div className="absolute top-20 right-4 z-[400] flex flex-col gap-3 max-w-[210px]">
+        
+        {/* 1. Capas del Mapa */}
+        <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
+          <div className="font-semibold text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1 mb-1">
+            <Layers size={13} className="text-brand-400" />
+            Capas del Mapa
+          </div>
+
+          <button 
+            onClick={() => setShowMainRoutes(!showMainRoutes)}
+            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showMainRoutes ? 'bg-slate-800 text-brand-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
+          >
+            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Trayectos Tren/Bus</span>
+            {showMainRoutes ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
+
+          <button 
+            onClick={() => setShowDayPaths(!showDayPaths)}
+            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showDayPaths ? 'bg-slate-800 text-amber-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
+          >
+            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-400"></div> Rutas Urbanas del Día</span>
+            {showDayPaths ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
+
+          <button 
+            onClick={() => setShowHotels(!showHotels)}
+            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showHotels ? 'bg-slate-800 text-indigo-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
+          >
+            <span className="flex items-center gap-1.5">🏨 Hoteles Recomendados</span>
+            {showHotels ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
+
+          <button 
+            onClick={() => setShowPois(!showPois)}
+            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showPois ? 'bg-slate-800 text-teal-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
+          >
+            <span className="flex items-center gap-1.5">🏛️ Sitios a Visitar (POIs)</span>
+            {showPois ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
+        </div>
+
+        {/* 2. Agrandar Ciudad (Debajo de las capas con el mismo formato) */}
+        {validDays.length > 0 && (
+          <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
+            <div className="font-semibold text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1 mb-1">
+              <Search size={13} className="text-brand-400" />
+              Agrandar Ciudad
+            </div>
+
+            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+              {validDays.map((day, idx) => (
+                <button
+                  key={`city-zoom-${idx}`}
+                  onClick={() => {
+                    if (day.coordinates) {
+                      setInternalTarget({ lat: day.coordinates.lat, lng: day.coordinates.lng, zoom: 14.5, label: day.location });
+                    }
+                  }}
+                  className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-[11px] bg-slate-800 hover:bg-brand-500 text-white font-medium active:scale-95 border border-slate-700/60 text-left"
+                >
+                  <span className="truncate">📍 D{day.dayNumber}: {day.location}</span>
+                  <ZoomIn size={12} className="shrink-0 text-brand-300" />
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setInternalTarget(null)}
+              className="mt-0.5 flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 transition-colors border border-slate-700/60"
+              title="Ver mapa completo"
+            >
+              <Maximize2 size={12} />
+              <span>Vista General</span>
+            </button>
+          </div>
+        )}
+
+        {/* 3. Leyenda de Transporte */}
+        <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs">
+          <div className="font-semibold mb-2 text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
+            <Compass size={12} className="text-brand-400" />
+            Leyenda de Transporte
+          </div>
+          <div className="flex flex-col gap-1.5 text-[11px]">
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-red-500 rounded-full"></div> Tren</div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-blue-500 rounded-full"></div> Autobús</div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-green-500 rounded-full"></div> Vuelo</div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-teal-500 rounded-full"></div> Ferry</div>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 };
