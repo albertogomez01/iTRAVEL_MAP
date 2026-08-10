@@ -160,6 +160,14 @@ const tripPlanSchema = {
   type: Type.OBJECT,
   properties: {
     origin: { type: Type.STRING, description: "Ciudad y país de origen del viaje (ej. 'Madrid, España'). Si no se sabe, pon 'Por definir'." },
+    originCoordinates: {
+      type: Type.OBJECT,
+      description: "Latitud y longitud de la ciudad de origen",
+      properties: {
+        lat: { type: Type.NUMBER },
+        lng: { type: Type.NUMBER }
+      }
+    },
     options: {
       type: Type.ARRAY,
       description: "EXACTAMENTE 3 opciones de itinerario basadas en la conversación (ej. Económica, Equilibrada, Rápida).",
@@ -268,14 +276,55 @@ const tripPlanSchema = {
   required: ["origin", "options"]
 };
 
-export const enrichTripPlanCoordinates = (plan: TripPlan): TripPlan => {
+const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  'madrid': { lat: 40.4168, lng: -3.7038 },
+  'barcelona': { lat: 41.3851, lng: 2.1734 },
+  'sevilla': { lat: 37.3891, lng: -5.9845 },
+  'valencia': { lat: 39.4699, lng: -0.3763 },
+  'málaga': { lat: 36.7213, lng: -4.4214 },
+  'malaga': { lat: 36.7213, lng: -4.4214 },
+  'bilbao': { lat: 43.2630, lng: -2.9350 },
+  'lisboa': { lat: 38.7223, lng: -9.1393 },
+  'porto': { lat: 41.1579, lng: -8.6291 },
+  'roma': { lat: 41.9028, lng: 12.4964 },
+  'parís': { lat: 48.8566, lng: 2.3522 },
+  'paris': { lat: 48.8566, lng: 2.3522 },
+  'londres': { lat: 51.5074, lng: -0.1278 },
+  'berlín': { lat: 52.5200, lng: 13.4050 },
+  'berlin': { lat: 52.5200, lng: 13.4050 },
+  'ámsterdam': { lat: 52.3676, lng: 4.9041 },
+  'amsterdam': { lat: 52.3676, lng: 4.9041 },
+  'viena': { lat: 48.2082, lng: 16.3738 },
+  'praga': { lat: 50.0755, lng: 14.4378 }
+};
+
+export const getCityCoordinates = (cityName: string): { lat: number; lng: number } | null => {
+  if (!cityName) return null;
+  const clean = cityName.toLowerCase().split(',')[0].trim();
+  return CITY_COORDINATES[clean] || null;
+};
+
+export const enrichTripPlanCoordinates = (plan: TripPlan, preferences?: UserPreferences): TripPlan => {
   if (!plan || !plan.options) return plan;
+
+  // Resolve origin coordinates
+  let originCoords = plan.originCoordinates;
+  if (!originCoords || typeof originCoords.lat !== 'number') {
+    if (preferences?.originLocation) {
+      originCoords = getCityCoordinates(preferences.originLocation) || undefined;
+    }
+    if (!originCoords && plan.origin && plan.origin !== 'Por definir') {
+      originCoords = getCityCoordinates(plan.origin) || undefined;
+    }
+  }
+
+  const isRoundTrip = !preferences?.tripType || preferences.tripType === 'RoundTrip';
 
   return {
     ...plan,
-    options: plan.options.map(option => ({
-      ...option,
-      days: (option.days || []).map(day => {
+    originCoordinates: originCoords,
+    options: plan.options.map(option => {
+      const days = (option.days || []).map((day, dIdx) => {
         const baseLat = day.coordinates?.lat || 48.8566;
         const baseLng = day.coordinates?.lng || 2.3522;
 
@@ -307,14 +356,48 @@ export const enrichTripPlanCoordinates = (plan: TripPlan): TripPlan => {
           };
         });
 
+        // Ensure Day 1 transport has from = origin if specified
+        let transport = [...(day.transport || [])];
+        if (dIdx === 0 && plan.origin && plan.origin !== 'Por definir' && transport.length > 0) {
+          if (transport[0].from !== plan.origin) {
+            transport[0] = {
+              ...transport[0],
+              from: plan.origin,
+              to: day.location
+            };
+          }
+        }
+
         return {
           ...day,
           coordinates: { lat: baseLat, lng: baseLng },
+          transport,
           accommodation: enrichedAccommodation,
           pois: enrichedPois
         };
-      })
-    }))
+      });
+
+      // Ensure return leg on last day if RoundTrip and origin is set
+      if (isRoundTrip && plan.origin && plan.origin !== 'Por definir' && days.length > 0) {
+        const lastDay = days[days.length - 1];
+        const hasReturnTransport = lastDay.transport.some(t => t.to === plan.origin);
+        if (!hasReturnTransport) {
+          lastDay.transport.push({
+            mode: 'Train',
+            from: lastDay.location,
+            to: plan.origin,
+            duration: 'Regreso',
+            requiresReservation: false,
+            notes: `Viaje de vuelta a ${plan.origin}`
+          });
+        }
+      }
+
+      return {
+        ...option,
+        days
+      };
+    })
   };
 };
 
@@ -322,17 +405,32 @@ export const extractItineraryState = async (chatHistoryText: string, preferences
   if (!ai) return null;
   
   const originContext = preferences.originLocation ? `, Origen: ${preferences.originLocation}` : '';
+  const tripTypeContext = preferences.tripType === 'OneWay' ? ', Tipo: Solo Ida (sin regreso al origen)' : ', Tipo: Ida y Vuelta (incluir trayecto de regreso al origen en el último día)';
   const datesContext = preferences.startDate && preferences.endDate 
     ? `, Fechas: ${preferences.startDate} a ${preferences.endDate}` 
     : '';
-  const prefContext = `Preferencias: Trenes Nocturnos: ${preferences.preferNightTrains}, Presupuesto Máx: ${preferences.maxBudget}€, Ritmo: ${preferences.pace}${datesContext}${originContext}.`;
+  const prefContext = `Preferencias: Trenes Nocturnos: ${preferences.preferNightTrains}, Presupuesto Máx: ${preferences.maxBudget}€, Ritmo: ${preferences.pace}${datesContext}${originContext}${tripTypeContext}.`;
+
+  const promptText = `Basándote en el siguiente historial de conversación y preferencias, extrae el plan de viaje. DEBES generar EXACTAMENTE 3 opciones de itinerario (ej. Económica, Equilibrada, Rápida).
+
+REGLAS CRÍTICAS DE RUTAS DE ORIGEN Y REGRESO:
+- Si hay una ciudad de origen (ej. Madrid):
+  1. El Día 1 DEBE incluir el trayecto saliendo desde el origen hacia la primera ciudad de destino.
+  2. Si el viaje es de 'Ida y Vuelta', el último día DEBE incluir el trayecto de regreso desde la última ciudad hacia la ciudad de origen.
+  3. Si es 'Solo Ida', no incluyas el transporte de regreso.
+- Incluye enlaces de reserva útiles, coordenadas de origen, ciudades, hoteles y POIs.
+
+${prefContext}
+
+Historial de Conversación:
+${chatHistoryText}`;
 
   const modelsToTry = CANDIDATE_MODELS;
   for (const model of modelsToTry) {
     try {
       const response = await ai.models.generateContent({
         model,
-        contents: `Basándote en el siguiente historial de conversación y preferencias, extrae el plan de viaje. DEBES generar EXACTAMENTE 3 opciones de itinerario (ej. Económica, Equilibrada, Rápida) para que el usuario elija. Si el usuario no ha dado un origen, pon 'Por definir'. Incluye enlaces de reserva útiles, coordenadas de ciudades, hoteles y POIs.\n\n${prefContext}\n\nHistorial de Conversación:\n${chatHistoryText}`,
+        contents: promptText,
         config: {
           responseMimeType: 'application/json',
           responseSchema: tripPlanSchema,
@@ -344,7 +442,7 @@ export const extractItineraryState = async (chatHistoryText: string, preferences
       if (!jsonStr) continue;
       
       const parsedPlan = JSON.parse(jsonStr) as TripPlan;
-      return enrichTripPlanCoordinates(parsedPlan);
+      return enrichTripPlanCoordinates(parsedPlan, preferences);
     } catch (error: any) {
       console.warn(`Error extrayendo itinerario con modelo ${model}:`, error?.message || error);
     }

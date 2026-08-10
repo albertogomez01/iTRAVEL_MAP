@@ -69,6 +69,10 @@ export interface ItineraryOption {
 
 export interface TripPlan {
   origin: string;
+  originCoordinates?: {
+    lat: number;
+    lng: number;
+  };
   options: ItineraryOption[];
 }
 
@@ -95,4 +99,5 @@ export interface UserPreferences {
   startDate?: string;
   endDate?: string;
   maxBudget: number;
+  tripType?: 'RoundTrip' | 'OneWay';
 }

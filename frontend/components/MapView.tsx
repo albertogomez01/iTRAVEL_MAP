@@ -22,6 +22,14 @@ const createHotelIcon = (name: string) => L.divIcon({
   popupAnchor: [0, -13]
 });
 
+const createOriginIcon = (name: string) => L.divIcon({
+  className: 'custom-origin-icon',
+  html: `<div style="background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: white; border-radius: 12px; padding: 4px 10px; display: flex; align-items: center; gap: 4px; font-weight: bold; font-size: 11.5px; border: 2px solid white; box-shadow: 0 4px 14px rgba(22,163,74,0.5); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">🚩 Origen: ${name}</div>`,
+  iconSize: [140, 28],
+  iconAnchor: [70, 14],
+  popupAnchor: [0, -14]
+});
+
 const getPoiEmoji = (category: string) => {
   switch (category.toLowerCase()) {
     case 'monument': return '🏛️';
@@ -144,11 +152,21 @@ const getTransportColor = (mode?: string) => {
 
 interface MapViewProps {
   option: ItineraryOption | null;
+  origin?: string;
+  originCoordinates?: { lat: number; lng: number };
+  tripType?: 'RoundTrip' | 'OneWay';
   focusedTarget?: MapTarget | null;
   onAskCopilot?: (topic: string) => void;
 }
 
-export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCopilot }) => {
+export const MapView: React.FC<MapViewProps> = ({ 
+  option, 
+  origin, 
+  originCoordinates, 
+  tripType = 'RoundTrip', 
+  focusedTarget, 
+  onAskCopilot 
+}) => {
   const [isMapReady, setIsMapReady] = useState(false);
   const [isTilesLoading, setIsTilesLoading] = useState(true);
 
@@ -176,19 +194,25 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
   // Default center: Europe view
   const defaultCenter: [number, number] = [48.8566, 2.3522];
 
+  // Origin Position
+  const originPos: [number, number] | null = originCoordinates && typeof originCoordinates.lat === 'number' && typeof originCoordinates.lng === 'number'
+    ? [originCoordinates.lat, originCoordinates.lng]
+    : null;
+
   // Filter days with valid coordinates
   const validDays = option?.days?.filter(
     d => d.coordinates && typeof d.coordinates.lat === 'number' && typeof d.coordinates.lng === 'number'
   ) || [];
 
   const mainPositions: [number, number][] = validDays.map(d => [d.coordinates!.lat, d.coordinates!.lng]);
+  const allPositions: [number, number][] = originPos ? [originPos, ...mainPositions] : mainPositions;
 
   // Async route calculation effect using OSRM & curved fallbacks
   useEffect(() => {
     let isMounted = true;
 
     const fetchAllRoutes = async () => {
-      if (!validDays || validDays.length < 2) {
+      if (!validDays || validDays.length === 0) {
         if (isMounted) setRealisticSegments([]);
         return;
       }
@@ -196,6 +220,22 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
       setIsCalculatingRoutes(true);
       const newSegments: { positions: [number, number][]; color: string; mode: string }[] = [];
 
+      // 1. Initial Leg: Origin -> Day 1 City (if originPos exists)
+      if (originPos && validDays[0]?.coordinates) {
+        const day1Pos: [number, number] = [validDays[0].coordinates.lat, validDays[0].coordinates.lng];
+        const distToDay1 = Math.hypot(originPos[0] - day1Pos[0], originPos[1] - day1Pos[1]);
+        if (distToDay1 > 0.001) {
+          const day1Mode = validDays[0].transport?.[0]?.mode || 'Train';
+          const polylineCoords = await getRealisticRoute(originPos, day1Pos, day1Mode);
+          newSegments.push({
+            positions: polylineCoords,
+            color: getTransportColor(day1Mode),
+            mode: day1Mode
+          });
+        }
+      }
+
+      // 2. Intermediate Legs: Day i -> Day i+1
       for (let i = 0; i < validDays.length - 1; i++) {
         const start = validDays[i];
         const end = validDays[i + 1];
@@ -212,6 +252,24 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
         });
       }
 
+      // 3. Return Leg: Last Day City -> Origin (if RoundTrip)
+      const isRoundTrip = !tripType || tripType === 'RoundTrip';
+      if (isRoundTrip && originPos && validDays.length > 0) {
+        const lastDay = validDays[validDays.length - 1];
+        const lastPos: [number, number] = [lastDay.coordinates!.lat, lastDay.coordinates!.lng];
+        const distToOrigin = Math.hypot(lastPos[0] - originPos[0], lastPos[1] - originPos[1]);
+        if (distToOrigin > 0.001) {
+          const returnTransport = lastDay.transport.find(t => t.to === origin || t.notes?.includes('vuelta')) || lastDay.transport[lastDay.transport.length - 1];
+          const returnMode = returnTransport?.mode || 'Train';
+          const polylineCoords = await getRealisticRoute(lastPos, originPos, returnMode);
+          newSegments.push({
+            positions: polylineCoords,
+            color: getTransportColor(returnMode),
+            mode: returnMode
+          });
+        }
+      }
+
       if (isMounted) {
         setRealisticSegments(newSegments);
         setIsCalculatingRoutes(false);
@@ -223,7 +281,7 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
     return () => {
       isMounted = false;
     };
-  }, [option]);
+  }, [option, originCoordinates, tripType]);
 
   // Intra-city local paths (station -> hotel -> POIs -> hotel)
   const dayLocalPaths = validDays.map(day => {
@@ -293,7 +351,7 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
         />
         
         <MapController 
-          coordinates={mainPositions} 
+          coordinates={allPositions} 
           focusedTarget={focusedTarget} 
           internalTarget={internalTarget}
         />
@@ -328,6 +386,28 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
           />
         ))}
 
+        {/* 2.5 Origin Marker */}
+        {originPos && (
+          <Marker
+            position={originPos}
+            icon={createOriginIcon(origin || 'Origen')}
+          >
+            <Popup className="rounded-2xl">
+              <div className="font-sans p-1">
+                <strong className="text-slate-900 text-sm font-bold block mb-1">Punto de Origen: {origin}</strong>
+                <span className="text-xs text-slate-500 block mb-2">Punto de salida del itinerario</span>
+                <button
+                  onClick={() => setInternalTarget({ lat: originPos[0], lng: originPos[1], zoom: 13.5, label: origin })}
+                  className="w-full text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                >
+                  <ZoomIn size={13} />
+                  <span>Zoom a Origen</span>
+                </button>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+
         {/* 3. Main Day Center Markers */}
         {validDays.map((day, idx) => (
           <Marker 
@@ -358,193 +438,7 @@ export const MapView: React.FC<MapViewProps> = ({ option, focusedTarget, onAskCo
             </Popup>
           </Marker>
         ))}
-
-        {/* 4. Hotel / Accommodation Markers */}
-        {showHotels && validDays.map((day, idx) => {
-          if (!day.accommodation?.coordinates) return null;
-          const acc = day.accommodation;
-          return (
-            <Marker
-              key={`hotel-marker-${idx}-${day.dayNumber}`}
-              position={[acc.coordinates.lat, acc.coordinates.lng]}
-              icon={createHotelIcon(acc.name)}
-            >
-              <Popup className="rounded-2xl">
-                <div className="font-sans p-1 max-w-xs">
-                  <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                    <Bed size={12} /> Hotel Recomendado (Día {day.dayNumber})
-                  </div>
-                  <strong className="text-slate-900 text-sm font-bold block mb-1">{acc.name}</strong>
-                  <span className="text-xs text-slate-600 block mb-1">{acc.location}</span>
-                  {acc.notes && <p className="text-xs text-slate-500 italic border-t border-slate-100 pt-1 mt-1 mb-2">{acc.notes}</p>}
-                  
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => setInternalTarget({ lat: acc.coordinates!.lat, lng: acc.coordinates!.lng, zoom: 16 })}
-                      className="flex-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-                    >
-                      <ZoomIn size={12} />
-                      <span>Zoom Hotel</span>
-                    </button>
-                    {onAskCopilot && (
-                      <button
-                        onClick={() => onAskCopilot(`el hotel ${acc.name} en ${day.location}`)}
-                        className="flex-1 text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-                      >
-                        <MessageSquarePlus size={12} />
-                        <span>Preguntar</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-
-        {/* 5. POI Markers (Monuments, Restaurants, Museums, Nature) */}
-        {showPois && validDays.map((day) => 
-          (day.pois || []).map((poi, pIdx) => {
-            if (!poi.coordinates) return null;
-            return (
-              <Marker
-                key={`poi-marker-${day.dayNumber}-${pIdx}`}
-                position={[poi.coordinates.lat, poi.coordinates.lng]}
-                icon={createPoiIcon(poi.name, poi.category)}
-              >
-                <Popup className="rounded-2xl">
-                  <div className="font-sans p-1 max-w-xs">
-                    <div className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                      <span>{getPoiEmoji(poi.category)}</span>
-                      <span>{poi.category} • Día {day.dayNumber}</span>
-                    </div>
-                    <strong className="text-slate-900 text-sm font-bold block mb-1">{poi.name}</strong>
-                    <p className="text-xs text-slate-600 mb-1">{poi.description}</p>
-                    {poi.tips && (
-                      <div className="text-[11px] text-amber-700 bg-amber-50 p-1.5 rounded-lg border border-amber-100 italic mb-2">
-                        💡 {poi.tips}
-                      </div>
-                    )}
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => setInternalTarget({ lat: poi.coordinates!.lat, lng: poi.coordinates!.lng, zoom: 16 })}
-                        className="flex-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-                      >
-                        <ZoomIn size={12} />
-                        <span>Zoom Sitio</span>
-                      </button>
-                      {onAskCopilot && (
-                        <button
-                          onClick={() => onAskCopilot(`el punto de interés ${poi.name} en ${day.location}`)}
-                          className="flex-1 text-[11px] bg-teal-50 hover:bg-teal-100 text-teal-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-                        >
-                          <MessageSquarePlus size={12} />
-                          <span>Preguntar</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })
-        )}
       </MapContainer>
-
-      {/* Floating Right Control Panel (Capas, Agrandar Ciudad, Leyenda) */}
-      <div className="absolute top-20 right-4 z-[400] hidden sm:flex flex-col gap-3 max-w-[210px]">
-        
-        {/* 1. Capas del Mapa */}
-        <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
-          <div className="font-semibold text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1 mb-1">
-            <Layers size={13} className="text-brand-400" />
-            Capas del Mapa
-          </div>
-
-          <button 
-            onClick={() => setShowMainRoutes(!showMainRoutes)}
-            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showMainRoutes ? 'bg-slate-800 text-brand-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
-          >
-            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Trayectos Tren/Bus</span>
-            {showMainRoutes ? <Eye size={12} /> : <EyeOff size={12} />}
-          </button>
-
-          <button 
-            onClick={() => setShowDayPaths(!showDayPaths)}
-            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showDayPaths ? 'bg-slate-800 text-amber-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
-          >
-            <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-400"></div> Rutas Urbanas del Día</span>
-            {showDayPaths ? <Eye size={12} /> : <EyeOff size={12} />}
-          </button>
-
-          <button 
-            onClick={() => setShowHotels(!showHotels)}
-            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showHotels ? 'bg-slate-800 text-indigo-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
-          >
-            <span className="flex items-center gap-1.5">🏨 Hoteles Recomendados</span>
-            {showHotels ? <Eye size={12} /> : <EyeOff size={12} />}
-          </button>
-
-          <button 
-            onClick={() => setShowPois(!showPois)}
-            className={`flex items-center justify-between gap-3 px-2.5 py-1 rounded-lg transition-colors text-[11px] ${showPois ? 'bg-slate-800 text-teal-300' : 'text-slate-500 hover:bg-slate-800/50'}`}
-          >
-            <span className="flex items-center gap-1.5">🏛️ Sitios a Visitar (POIs)</span>
-            {showPois ? <Eye size={12} /> : <EyeOff size={12} />}
-          </button>
-        </div>
-
-        {/* 2. Agrandar Ciudad (Debajo de las capas con el mismo formato) */}
-        {validDays.length > 0 && (
-          <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
-            <div className="font-semibold text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1 mb-1">
-              <Search size={13} className="text-brand-400" />
-              Agrandar Ciudad
-            </div>
-
-            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-0.5">
-              {validDays.map((day, idx) => (
-                <button
-                  key={`city-zoom-${idx}`}
-                  onClick={() => {
-                    if (day.coordinates) {
-                      setInternalTarget({ lat: day.coordinates.lat, lng: day.coordinates.lng, zoom: 14.5, label: day.location });
-                    }
-                  }}
-                  className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-[11px] bg-slate-800 hover:bg-brand-500 text-white font-medium active:scale-95 border border-slate-700/60 text-left"
-                >
-                  <span className="truncate">📍 D{day.dayNumber}: {day.location}</span>
-                  <ZoomIn size={12} className="shrink-0 text-brand-300" />
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setInternalTarget(null)}
-              className="mt-0.5 flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 transition-colors border border-slate-700/60"
-              title="Ver mapa completo"
-            >
-              <Maximize2 size={12} />
-              <span>Vista General</span>
-            </button>
-          </div>
-        )}
-
-        {/* 3. Leyenda de Transporte */}
-        <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs">
-          <div className="font-semibold mb-2 text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
-            <Compass size={12} className="text-brand-400" />
-            Leyenda de Transporte
-          </div>
-          <div className="flex flex-col gap-1.5 text-[11px]">
-            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-red-500 rounded-full"></div> Tren</div>
-            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-blue-500 rounded-full"></div> Autobús</div>
-            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-green-500 rounded-full"></div> Vuelo</div>
-            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 bg-teal-500 rounded-full"></div> Ferry</div>
-          </div>
-        </div>
-
-      </div>
     </div>
   );
 };

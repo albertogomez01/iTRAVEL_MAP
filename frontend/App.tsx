@@ -120,7 +120,8 @@ export default function App() {
     pace: 'Moderate',
     maxBudget: 1500,
     startDate: '',
-    endDate: ''
+    endDate: '',
+    tripType: 'RoundTrip'
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -340,7 +341,14 @@ export default function App() {
 
       {/* 1. PERMANENT INTERACTIVE MAP BACKGROUND */}
       <div className="absolute inset-0 z-0">
-        <MapView option={selectedOption} focusedTarget={focusedTarget} onAskCopilot={handleAskCopilot} />
+        <MapView 
+          option={selectedOption} 
+          origin={tripPlan?.origin || preferences.originLocation}
+          originCoordinates={tripPlan?.originCoordinates}
+          tripType={preferences.tripType || 'RoundTrip'}
+          focusedTarget={focusedTarget} 
+          onAskCopilot={handleAskCopilot} 
+        />
       </div>
 
       {/* 2. TOP-LEFT HAMBURGER MENU BUTTON */}

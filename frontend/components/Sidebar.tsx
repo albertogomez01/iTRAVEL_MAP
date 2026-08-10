@@ -256,6 +256,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </label>
             </div>
 
+            {/* Tipo de Viaje & Alojamiento & Ritmo */}
+            <div>
+              <label className="block text-[11px] font-medium text-slate-400 mb-1 flex items-center gap-1">
+                <Navigation size={12} className="text-emerald-400" />
+                Tipo de Viaje
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDraftPrefs(prev => ({ ...prev, tripType: 'RoundTrip' }))}
+                  className={`py-1.5 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all border ${(!draftPrefs.tripType || draftPrefs.tripType === 'RoundTrip') ? 'bg-brand-500/20 text-brand-300 border-brand-500' : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'}`}
+                >
+                  🔄 Ida y Vuelta
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDraftPrefs(prev => ({ ...prev, tripType: 'OneWay' }))}
+                  className={`py-1.5 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all border ${(draftPrefs.tripType === 'OneWay') ? 'bg-brand-500/20 text-brand-300 border-brand-500' : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'}`}
+                >
+                  ➡️ Solo Ida
+                </button>
+              </div>
+            </div>
+
             {/* Estilo y Ritmo */}
             <div className="grid grid-cols-2 gap-2">
               <div>
