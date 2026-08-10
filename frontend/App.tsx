@@ -668,9 +668,9 @@ export default function App() {
         )}
       </div>
 
-      {/* 5. FLOATING TRANSLUCENT CHAT OVERLAY (RIGHT SIDE ON LANDSCAPE & DESKTOP) */}
+      {/* 5. FLOATING TRANSLUCENT CHAT OVERLAY (RIGHT SIDE ON LANDSCAPE & DESKTOP, HALF HEIGHT ON MOBILE PORTRAIT) */}
       {isChatOpen && (
-        <div className="fixed inset-x-2 landscape:left-auto landscape:right-2 landscape:w-[50vw] sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-16 landscape:top-12 sm:top-16 bottom-[76px] landscape:bottom-[54px] sm:bottom-24 z-40 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-3xl landscape:rounded-2xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+        <div className="fixed inset-x-2 top-auto bottom-[74px] h-[45vh] max-h-[420px] landscape:top-12 landscape:bottom-[54px] landscape:h-auto landscape:w-[50vw] landscape:left-auto landscape:right-2 sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] sm:top-16 sm:bottom-24 sm:h-auto sm:max-h-none z-40 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-3xl landscape:rounded-2xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
           <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
             <div className="flex items-center gap-2">
               <Sparkles size={15} className="text-brand-400" />
@@ -704,9 +704,9 @@ export default function App() {
         </div>
       )}
 
-      {/* 6. FLOATING TRANSLUCENT ITINERARY OVERLAY (RIGHT SIDE ON LANDSCAPE & DESKTOP) */}
+      {/* 6. FLOATING TRANSLUCENT ITINERARY OVERLAY (RIGHT SIDE ON LANDSCAPE & DESKTOP, HALF HEIGHT ON MOBILE PORTRAIT) */}
       {isItineraryOpen && (
-        <div className="fixed inset-x-2 landscape:left-auto landscape:right-2 landscape:w-[50vw] sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] top-16 landscape:top-12 sm:top-16 bottom-3 landscape:bottom-2 sm:bottom-24 z-40 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-3xl landscape:rounded-2xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+        <div className="fixed inset-x-2 top-auto bottom-2 h-[52vh] max-h-[480px] landscape:top-12 landscape:bottom-2 landscape:h-auto landscape:w-[50vw] landscape:left-auto landscape:right-2 sm:left-auto sm:right-4 sm:w-[460px] md:w-[500px] lg:w-[540px] sm:top-16 sm:bottom-24 sm:h-auto sm:max-h-none z-40 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-3xl landscape:rounded-2xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
           <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
             <h2 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
               <Calendar size={15} className="text-brand-400" />
