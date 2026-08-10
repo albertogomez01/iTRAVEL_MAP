@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { ItineraryOption, MapTarget } from '../types';
-import { Loader2, Navigation, Compass, Layers, Bed, Landmark, Coffee, Camera, Eye, EyeOff, MessageSquarePlus, ZoomIn, ZoomOut, Search, Maximize2, MapPin, ChevronDown } from 'lucide-react';
+import { Loader2, Navigation, Compass, Layers, Bed, Landmark, Coffee, Camera, Eye, EyeOff, MessageSquarePlus, ZoomIn, ZoomOut, Search, Maximize2, MapPin, ChevronDown, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
 import { getRealisticRoute } from '../services/routeService';
 
 // Custom icons
@@ -181,6 +181,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
   // Internal city focus state
   const [internalTarget, setInternalTarget] = useState<MapTarget | null>(null);
+  const [activeCityIndex, setActiveCityIndex] = useState<number>(-1); // -1 = Overview
 
   // Zoom handlers
   const [zoomInFn, setZoomInFn] = useState<(() => void) | null>(null);
@@ -206,6 +207,36 @@ export const MapView: React.FC<MapViewProps> = ({
   const validDays = option?.days?.filter(
     d => d.coordinates && typeof d.coordinates.lat === 'number' && typeof d.coordinates.lng === 'number'
   ) || [];
+
+  // Sync active index when focusedTarget changes
+  useEffect(() => {
+    if (focusedTarget && validDays.length > 0) {
+      const matchedIdx = validDays.findIndex(d => 
+        d.coordinates && 
+        Math.abs(d.coordinates.lat - focusedTarget.lat) < 0.01 && 
+        Math.abs(d.coordinates.lng - focusedTarget.lng) < 0.01
+      );
+      if (matchedIdx !== -1) {
+        setActiveCityIndex(matchedIdx);
+      }
+    }
+  }, [focusedTarget, validDays]);
+
+  const handleFocusCityIndex = (idx: number) => {
+    if (idx < 0) {
+      setActiveCityIndex(-1);
+      setInternalTarget(null);
+    } else if (validDays[idx] && validDays[idx].coordinates) {
+      setActiveCityIndex(idx);
+      const day = validDays[idx];
+      setInternalTarget({
+        lat: day.coordinates!.lat,
+        lng: day.coordinates!.lng,
+        zoom: 14.5,
+        label: day.location
+      });
+    }
+  };
 
   const mainPositions: [number, number][] = validDays.map(d => [d.coordinates!.lat, d.coordinates!.lng]);
   const allPositions: [number, number][] = originPos ? [originPos, ...mainPositions] : mainPositions;
@@ -322,6 +353,71 @@ export const MapView: React.FC<MapViewProps> = ({
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[400] bg-slate-900/95 text-white backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700 shadow-xl flex items-center gap-2 text-xs font-medium animate-fade-in">
           <Loader2 size={13} className="animate-spin text-brand-400" />
           <span>{isCalculatingRoutes ? 'Calculando ruteo OSRM...' : 'Cargando mapa...'}</span>
+        </div>
+      )}
+
+      {/* FLOATING STEP-BY-STEP CITY ZOOM NAVIGATOR */}
+      {validDays.length > 0 && (
+        <div className="absolute top-28 sm:top-16 left-1/2 -translate-x-1/2 z-30 max-w-[95vw] sm:max-w-xl w-auto animate-fade-in">
+          <div className="bg-slate-900/95 text-white backdrop-blur-xl p-1.5 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-1.5">
+            
+            {/* Prev button */}
+            <button
+              onClick={() => {
+                const nextIdx = activeCityIndex <= 0 ? validDays.length - 1 : activeCityIndex - 1;
+                handleFocusCityIndex(nextIdx);
+              }}
+              className="p-1.5 rounded-xl bg-slate-800 hover:bg-brand-500 text-slate-300 hover:text-white transition-colors border border-slate-700/60 shrink-0 active:scale-95 cursor-pointer"
+              title="Anterior ciudad"
+            >
+              <ChevronLeft size={15} />
+            </button>
+
+            {/* Horizontal list of cities */}
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 px-0.5">
+              <button
+                onClick={() => handleFocusCityIndex(-1)}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer ${
+                  activeCityIndex === -1 
+                    ? 'bg-brand-500 text-white shadow-md border border-brand-400/50 scale-105' 
+                    : 'bg-slate-800/80 text-slate-400 hover:text-white border border-slate-700/50'
+                }`}
+              >
+                <Globe size={12} />
+                <span>General</span>
+              </button>
+
+              {validDays.map((day, idx) => {
+                const isActive = activeCityIndex === idx;
+                return (
+                  <button
+                    key={`city-pill-${idx}`}
+                    onClick={() => handleFocusCityIndex(idx)}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer ${
+                      isActive 
+                        ? 'bg-teal-500 text-white shadow-md ring-2 ring-teal-400/30 scale-105 border border-teal-300' 
+                        : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700/50'
+                    }`}
+                  >
+                    <MapPin size={11} className={isActive ? 'text-white' : 'text-teal-400'} />
+                    <span className="whitespace-nowrap">D{day.dayNumber}: {day.location}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Next button */}
+            <button
+              onClick={() => {
+                const nextIdx = activeCityIndex >= validDays.length - 1 ? 0 : activeCityIndex + 1;
+                handleFocusCityIndex(nextIdx);
+              }}
+              className="p-1.5 rounded-xl bg-slate-800 hover:bg-brand-500 text-slate-300 hover:text-white transition-colors border border-slate-700/60 shrink-0 active:scale-95 cursor-pointer"
+              title="Siguiente ciudad"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
         </div>
       )}
 
