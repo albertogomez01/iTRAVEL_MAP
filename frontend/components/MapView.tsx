@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { ItineraryOption, MapTarget } from '../types';
-import { Loader2, Navigation, Compass, Layers, Bed, Landmark, Coffee, Camera, Eye, EyeOff, MessageSquarePlus, ZoomIn, ZoomOut, Search, Maximize2, MapPin } from 'lucide-react';
+import { Loader2, Navigation, Compass, Layers, Bed, Landmark, Coffee, Camera, Eye, EyeOff, MessageSquarePlus, ZoomIn, ZoomOut, Search, Maximize2, MapPin, ChevronDown } from 'lucide-react';
 import { getRealisticRoute } from '../services/routeService';
 
 // Custom icons
@@ -54,7 +54,7 @@ const createPoiIcon = (name: string, category: string) => {
 // Custom Zoom Control Buttons inside Leaflet context
 const MapZoomButtons: React.FC<{ onZoomIn: () => void; onZoomOut: () => void }> = ({ onZoomIn, onZoomOut }) => {
   return (
-    <div className="absolute top-20 left-4 z-[400] flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-2xl text-white">
+    <div className="absolute top-16 left-3 sm:top-20 sm:left-4 z-[400] flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-2xl text-white">
       <button
         onClick={onZoomIn}
         className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-brand-500 text-white flex items-center justify-center font-bold text-lg transition-colors active:scale-95"
@@ -175,6 +175,9 @@ export const MapView: React.FC<MapViewProps> = ({
   const [showDayPaths, setShowDayPaths] = useState(true);
   const [showHotels, setShowHotels] = useState(true);
   const [showPois, setShowPois] = useState(true);
+
+  // Mobile controls overlay toggle
+  const [showMobilePanel, setShowMobilePanel] = useState(false);
 
   // Internal city focus state
   const [internalTarget, setInternalTarget] = useState<MapTarget | null>(null);
@@ -318,7 +321,7 @@ export const MapView: React.FC<MapViewProps> = ({
       {(isTilesLoading || isCalculatingRoutes) && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[400] bg-slate-900/95 text-white backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700 shadow-xl flex items-center gap-2 text-xs font-medium animate-fade-in">
           <Loader2 size={13} className="animate-spin text-brand-400" />
-          <span>{isCalculatingRoutes ? 'Calculando ruteo OSRM en tiempo real...' : 'Cargando mapa en alta definición...'}</span>
+          <span>{isCalculatingRoutes ? 'Calculando ruteo OSRM...' : 'Cargando mapa...'}</span>
         </div>
       )}
 
@@ -397,7 +400,10 @@ export const MapView: React.FC<MapViewProps> = ({
                 <strong className="text-slate-900 text-sm font-bold block mb-1">Punto de Origen: {origin}</strong>
                 <span className="text-xs text-slate-500 block mb-2">Punto de salida del itinerario</span>
                 <button
-                  onClick={() => setInternalTarget({ lat: originPos[0], lng: originPos[1], zoom: 13.5, label: origin })}
+                  onClick={() => {
+                    setInternalTarget({ lat: originPos[0], lng: originPos[1], zoom: 13.5, label: origin });
+                    setShowMobilePanel(false);
+                  }}
                   className="w-full text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
                 >
                   <ZoomIn size={13} />
@@ -421,7 +427,10 @@ export const MapView: React.FC<MapViewProps> = ({
                 {day.theme && <span className="text-xs text-slate-500 block mb-2">{day.theme}</span>}
                 
                 <button
-                  onClick={() => setInternalTarget({ lat: day.coordinates!.lat, lng: day.coordinates!.lng, zoom: 14.5, label: day.location })}
+                  onClick={() => {
+                    setInternalTarget({ lat: day.coordinates!.lat, lng: day.coordinates!.lng, zoom: 14.5, label: day.location });
+                    setShowMobilePanel(false);
+                  }}
                   className="w-full text-xs bg-brand-500 hover:bg-brand-600 text-white font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 mb-2 shadow-sm"
                 >
                   <ZoomIn size={13} />
@@ -531,11 +540,21 @@ export const MapView: React.FC<MapViewProps> = ({
         )}
       </MapContainer>
 
+      {/* Mobile Floating Toggle Button for Capas & Ciudades */}
+      <button
+        onClick={() => setShowMobilePanel(!showMobilePanel)}
+        className="sm:hidden absolute top-16 right-3 z-[400] bg-slate-900/95 backdrop-blur-md text-white px-3 py-1.5 rounded-2xl border border-slate-800 shadow-2xl flex items-center gap-1.5 text-xs font-semibold active:scale-95"
+      >
+        <Layers size={13} className="text-brand-400" />
+        <span>Opciones Mapa</span>
+        <ChevronDown size={13} className={`transition-transform duration-200 ${showMobilePanel ? 'rotate-180 text-brand-400' : 'text-slate-400'}`} />
+      </button>
+
       {/* Floating Right Control Panel (Capas, Agrandar Ciudad, Leyenda) */}
-      <div className="absolute top-20 right-4 z-[400] flex flex-col gap-3 max-w-[210px]">
+      <div className={`absolute top-26 right-3 sm:top-20 sm:right-4 z-[400] flex flex-col gap-2.5 max-w-[220px] sm:max-w-[210px] ${showMobilePanel ? 'flex' : 'hidden sm:flex'}`}>
         
         {/* 1. Capas del Mapa */}
-        <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
+        <div className="bg-slate-900/95 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
           <div className="font-semibold text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1 mb-1">
             <Layers size={13} className="text-brand-400" />
             Capas del Mapa
@@ -576,19 +595,20 @@ export const MapView: React.FC<MapViewProps> = ({
 
         {/* 2. Agrandar Ciudad (Debajo de las capas con el mismo formato) */}
         {validDays.length > 0 && (
-          <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
+          <div className="bg-slate-900/95 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs flex flex-col gap-2">
             <div className="font-semibold text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1 mb-1">
               <Search size={13} className="text-brand-400" />
               Agrandar Ciudad
             </div>
 
-            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+            <div className="flex flex-col gap-1.5 max-h-40 sm:max-h-48 overflow-y-auto pr-0.5">
               {validDays.map((day, idx) => (
                 <button
                   key={`city-zoom-${idx}`}
                   onClick={() => {
                     if (day.coordinates) {
                       setInternalTarget({ lat: day.coordinates.lat, lng: day.coordinates.lng, zoom: 14.5, label: day.location });
+                      setShowMobilePanel(false);
                     }
                   }}
                   className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-[11px] bg-slate-800 hover:bg-brand-500 text-white font-medium active:scale-95 border border-slate-700/60 text-left"
@@ -600,7 +620,10 @@ export const MapView: React.FC<MapViewProps> = ({
             </div>
 
             <button
-              onClick={() => setInternalTarget(null)}
+              onClick={() => {
+                setInternalTarget(null);
+                setShowMobilePanel(false);
+              }}
               className="mt-0.5 flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 transition-colors border border-slate-700/60"
               title="Ver mapa completo"
             >
@@ -611,7 +634,7 @@ export const MapView: React.FC<MapViewProps> = ({
         )}
 
         {/* 3. Leyenda de Transporte */}
-        <div className="bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs">
+        <div className="bg-slate-900/95 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-800 text-xs">
           <div className="font-semibold mb-2 text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
             <Compass size={12} className="text-brand-400" />
             Leyenda de Transporte

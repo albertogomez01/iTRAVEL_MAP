@@ -354,26 +354,26 @@ export default function App() {
       {/* 2. TOP-LEFT HAMBURGER MENU BUTTON */}
       <button 
         onClick={() => setIsMobileSidebarOpen(true)}
-        className="fixed top-4 left-4 z-40 bg-slate-900/90 text-white p-2 px-3 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-2 hover:bg-slate-800 transition-all backdrop-blur-md active:scale-95 cursor-pointer"
+        className="fixed top-2.5 left-2.5 sm:top-4 sm:left-4 z-40 bg-slate-900/90 text-white p-1.5 px-2.5 sm:p-2 sm:px-3 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-1.5 hover:bg-slate-800 transition-all backdrop-blur-md active:scale-95 cursor-pointer"
         title="Abrir ajustes de viaje y menú"
       >
-        <Menu size={20} className="text-brand-400" />
-        <img src="/logo.png" alt="Logo" className="w-5 h-5 rounded-md object-cover border border-teal-500/40" />
-        <span className="font-bold text-xs tracking-wide">iTRAVEL_MAP</span>
+        <Menu size={18} className="text-brand-400 shrink-0" />
+        <img src="/logo.png" alt="Logo" className="w-4 h-4 sm:w-5 sm:h-5 rounded-md object-cover border border-teal-500/40 shrink-0" />
+        <span className="font-bold text-[11px] sm:text-xs tracking-wide hidden min-[360px]:inline">iTRAVEL_MAP</span>
       </button>
 
       {/* 3. TOP-RIGHT FLOATING CONTROLS (TABS & USER) */}
-      <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
+      <div className="fixed top-2.5 right-2.5 sm:top-4 sm:right-4 z-40 flex items-center gap-1.5">
         <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-1 shadow-2xl flex items-center gap-1">
           <button
             onClick={() => {
               setIsChatOpen(!isChatOpen);
               if (isItineraryOpen) setIsItineraryOpen(false);
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${isChatOpen ? 'bg-brand-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition-all ${isChatOpen ? 'bg-brand-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
           >
-            <MessageSquare size={14} />
-            <span className="hidden sm:inline">Copiloto</span>
+            <MessageSquare size={13} />
+            <span className="inline">Copiloto</span>
           </button>
 
           <button
@@ -381,10 +381,10 @@ export default function App() {
               setIsItineraryOpen(!isItineraryOpen);
               if (isChatOpen) setIsChatOpen(false);
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all relative ${isItineraryOpen ? 'bg-brand-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
+            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition-all relative ${isItineraryOpen ? 'bg-brand-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`}
           >
-            <Calendar size={14} />
-            <span className="hidden sm:inline">Itinerario</span>
+            <Calendar size={13} />
+            <span className="inline">Itinerario</span>
             {tripPlan?.options && tripPlan.options.length > 0 && (
               <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
             )}
@@ -395,11 +395,11 @@ export default function App() {
               setIsChatOpen(false);
               setIsItineraryOpen(false);
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${!isChatOpen && !isItineraryOpen ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
+            className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition-all ${!isChatOpen && !isItineraryOpen ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
             title="Ver mapa despejado"
           >
-            <MapIcon size={14} />
-            <span className="hidden sm:inline">Mapa</span>
+            <MapIcon size={13} />
+            <span className="hidden min-[400px]:inline">Mapa</span>
           </button>
         </div>
 
@@ -434,10 +434,10 @@ export default function App() {
 
       {/* 5. FLOATING TRANSLUCENT CHAT OVERLAY */}
       {isChatOpen && (
-        <div className="fixed inset-x-4 top-16 bottom-24 max-w-2xl mx-auto z-20 bg-slate-950/80 backdrop-blur-md border border-slate-800/80 rounded-3xl p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+        <div className="fixed inset-x-2 sm:inset-x-4 top-14 sm:top-16 bottom-20 sm:bottom-24 max-w-2xl mx-auto z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
           <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
             <div className="flex items-center gap-2">
-              <Sparkles size={16} className="text-brand-400" />
+              <Sparkles size={15} className="text-brand-400" />
               <h2 className="font-semibold text-xs sm:text-sm">Copiloto IA (Gemini 3.6 Flash)</h2>
             </div>
             <div className="flex items-center gap-2">
@@ -470,10 +470,10 @@ export default function App() {
 
       {/* 6. FLOATING TRANSLUCENT ITINERARY OVERLAY */}
       {isItineraryOpen && (
-        <div className="fixed inset-x-4 top-16 bottom-24 max-w-4xl mx-auto z-20 bg-slate-950/85 backdrop-blur-md border border-slate-800/80 rounded-3xl p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
+        <div className="fixed inset-x-2 sm:inset-x-4 top-14 sm:top-16 bottom-20 sm:bottom-24 max-w-4xl mx-auto z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-3xl p-3 sm:p-4 flex flex-col shadow-2xl animate-fade-in overflow-hidden">
           <div className="p-2 border-b border-slate-800/80 flex justify-between items-center shrink-0 text-white">
             <h2 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
-              <Calendar size={16} className="text-brand-400" />
+              <Calendar size={15} className="text-brand-400" />
               Itinerarios y Opciones Generadas
             </h2>
             <button 
@@ -502,7 +502,7 @@ export default function App() {
       )}
 
       {/* 7. FLOATING BOTTOM CHAT INPUT BAR OVER MAP */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[92%] max-w-2xl bg-slate-950/90 backdrop-blur-md border border-slate-800/90 rounded-2xl p-2 shadow-2xl flex items-center gap-2 focus-within:border-brand-500 transition-all">
+      <div className="fixed bottom-2.5 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 w-[95%] sm:w-[92%] max-w-2xl bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-2xl p-1.5 sm:p-2 shadow-2xl flex items-center gap-2 focus-within:border-brand-500 transition-all">
         <textarea
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
@@ -510,27 +510,27 @@ export default function App() {
           onFocus={() => {
             if (!isChatOpen) setIsChatOpen(true);
           }}
-          placeholder="Escribe a dónde quieres ir o pega una URL de viaje..."
-          className="w-full max-h-28 min-h-[40px] bg-transparent border-none focus:ring-0 resize-none text-xs sm:text-sm py-2 px-3 text-white placeholder-slate-400"
+          placeholder="Escribe a dónde quieres ir o pega una URL..."
+          className="w-full max-h-24 min-h-[38px] bg-transparent border-none focus:ring-0 resize-none text-xs sm:text-sm py-1.5 px-2.5 text-white placeholder-slate-400"
           rows={1}
         />
         <div className="flex items-center gap-1">
           <button 
-            className="p-2 text-slate-400 hover:text-brand-400 transition-colors rounded-xl hover:bg-slate-800"
+            className="p-1.5 sm:p-2 text-slate-400 hover:text-brand-400 transition-colors rounded-xl hover:bg-slate-800"
             title="Pegar URL"
             onClick={() => {
               setInputValue(prev => prev + ' https://');
               setIsChatOpen(true);
             }}
           >
-            <LinkIcon size={18} />
+            <LinkIcon size={17} />
           </button>
           <button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isLoading || !isInitialized}
-            className="p-2.5 bg-brand-500 text-white rounded-xl hover:bg-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-brand-500/20 active:scale-95"
+            className="p-2 sm:p-2.5 bg-brand-500 text-white rounded-xl hover:bg-brand-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-brand-500/20 active:scale-95"
           >
-            <Send size={18} />
+            <Send size={17} />
           </button>
         </div>
       </div>
