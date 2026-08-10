@@ -14,6 +14,7 @@ import {
   setDoc, 
   getDocs, 
   deleteDoc, 
+  onSnapshot,
   query, 
   orderBy 
 } from 'firebase/firestore';
@@ -79,6 +80,27 @@ export const getUserTripsFromFirestore = async (userId: string) => {
   } catch (e) {
     console.error("Error al obtener viajes de Firestore:", e);
     return [];
+  }
+};
+
+export const subscribeToUserTrips = (userId: string, callback: (trips: any[]) => void) => {
+  if (!db || !userId) {
+    callback([]);
+    return () => {};
+  }
+  try {
+    const tripsRef = collection(db, 'users', userId, 'trips');
+    return onSnapshot(tripsRef, (snapshot) => {
+      const trips = snapshot.docs.map(d => d.data() as any);
+      const sorted = trips.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+      callback(sorted);
+    }, (error) => {
+      console.error("Error escuchando cambios en Firestore:", error);
+    });
+  } catch (e) {
+    console.error("Error suscribiendo a viajes de Firestore:", e);
+    callback([]);
+    return () => {};
   }
 };
 

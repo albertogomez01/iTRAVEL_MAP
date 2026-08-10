@@ -16,6 +16,7 @@ import {
   subscribeToAuth, 
   saveUserTripToFirestore, 
   getUserTripsFromFirestore, 
+  subscribeToUserTrips,
   deleteUserTripFromFirestore 
 } from './services/firebase';
 
@@ -81,35 +82,49 @@ export default function App() {
     }
   });
 
+  const activeTripIdRef = useRef<string | null>(null);
+  const initialSyncDoneRef = useRef(false);
+
   useEffect(() => {
-    const unsubscribe = subscribeToAuth(async (currentUser) => {
+    const unsubscribe = subscribeToAuth((currentUser) => {
       setFirebaseUser(currentUser);
       if (currentUser) {
         setIsLoginModalOpen(false);
-        // Sincronización en la nube (Firestore) para la misma cuenta de Google en PC y móvil
-        try {
-          const remoteTrips = await getUserTripsFromFirestore(currentUser.uid);
-          if (remoteTrips && remoteTrips.length > 0) {
-            setSavedTrips(prevLocal => {
-              const combinedMap = new Map();
-              remoteTrips.forEach(t => combinedMap.set(t.id, t));
-              prevLocal.forEach(t => {
-                if (!combinedMap.has(t.id)) combinedMap.set(t.id, t);
-              });
-              const merged = Array.from(combinedMap.values()).sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
-              try {
-                localStorage.setItem('itravel_saved_trips', JSON.stringify(merged));
-              } catch (e) {}
-              return merged;
-            });
-          }
-        } catch (err) {
-          console.error("Error sincronizando viajes de la nube:", err);
-        }
       }
     });
     return () => unsubscribe();
   }, []);
+
+  // Real-time synchronization of trips across PC and Phone using Cloud Firestore
+  useEffect(() => {
+    if (!firebaseUser?.uid) return;
+
+    const unsubscribeTrips = subscribeToUserTrips(firebaseUser.uid, (remoteTrips) => {
+      if (remoteTrips && remoteTrips.length > 0) {
+        setSavedTrips(remoteTrips);
+        try {
+          localStorage.setItem('itravel_saved_trips', JSON.stringify(remoteTrips));
+        } catch (e) {}
+
+        // Automatically load the latest trip on app launch if no trip is currently open
+        if (!initialSyncDoneRef.current) {
+          initialSyncDoneRef.current = true;
+          const latest = remoteTrips[0];
+          if (latest && latest.tripPlan) {
+            setPreferences(latest.preferences);
+            setMessages(latest.messages || []);
+            setTripPlan(latest.tripPlan);
+            if (latest.tripPlan?.options?.[0]?.id) {
+              setSelectedOptionId(latest.tripPlan.options[0].id);
+            }
+            activeTripIdRef.current = latest.id;
+          }
+        }
+      }
+    });
+
+    return () => unsubscribeTrips();
+  }, [firebaseUser?.uid]);
 
   const handleLoginSuccess = (userData: UserSession) => {
     setCustomUser(userData);
@@ -264,6 +279,35 @@ export default function App() {
         if (!selectedOptionId || !newPlan.options.find(o => o.id === selectedOptionId)) {
           setSelectedOptionId(newPlan.options[0].id);
         }
+
+        // Auto-save generated trip to local state and Firestore cloud in real-time
+        const tripId = activeTripIdRef.current || Date.now().toString();
+        activeTripIdRef.current = tripId;
+        const origin = preferences.originLocation || 'Origen';
+        const dest = newPlan.options[0]?.title || 'Viaje Personalizado';
+        const autoSaved: SavedTrip = {
+          id: tripId,
+          title: dest,
+          origin,
+          destination: dest,
+          dateCreated: new Date().toLocaleDateString('es-ES'),
+          preferences: { ...preferences },
+          messages: [...currentMessages],
+          tripPlan: { ...newPlan }
+        };
+
+        setSavedTrips(prev => {
+          const filtered = prev.filter(t => t.id !== autoSaved.id);
+          const updated = [autoSaved, ...filtered];
+          try {
+            localStorage.setItem('itravel_saved_trips', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+
+        if (firebaseUser?.uid) {
+          saveUserTripToFirestore(firebaseUser.uid, autoSaved);
+        }
       }
     } catch (error) {
       console.error("Error al actualizar el itinerario visual", error);
@@ -286,8 +330,11 @@ export default function App() {
   const handleSaveCurrentTrip = async () => {
     const origin = preferences.originLocation || 'Origen';
     const dest = tripPlan?.options?.[0]?.title || 'Viaje Personalizado';
+    const tripId = activeTripIdRef.current || Date.now().toString();
+    activeTripIdRef.current = tripId;
+
     const newSaved: SavedTrip = {
-      id: Date.now().toString(),
+      id: tripId,
       title: dest,
       origin: origin,
       destination: dest,
@@ -313,6 +360,7 @@ export default function App() {
   };
 
   const handleLoadTrip = (saved: SavedTrip) => {
+    activeTripIdRef.current = saved.id;
     setPreferences(saved.preferences);
     setMessages(saved.messages);
     setTripPlan(saved.tripPlan);
