@@ -58,27 +58,30 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       );
     },
     h2: ({ children }: any) => (
-      <h2 className={`text-xs sm:text-sm font-bold border-b pb-1 mt-3 mb-2 flex items-center gap-1.5 ${isModel ? 'text-teal-400 border-slate-700/80' : 'text-white border-white/20'}`}>
-        <Sparkles size={13} className={isModel ? 'text-teal-400' : 'text-amber-300'} />
+      <h2 className="text-xs sm:text-sm font-bold text-white border-b border-slate-700/80 pb-1 mt-3 mb-2 flex items-center gap-1.5">
+        <Sparkles size={13} className="text-teal-400" />
         <span>{children}</span>
       </h2>
     ),
     h3: ({ children }: any) => (
-      <h3 className={`text-xs font-bold mt-2.5 mb-1 flex items-center gap-1 ${isModel ? 'text-sky-300' : 'text-emerald-100'}`}>
+      <h3 className="text-xs font-bold text-white mt-2.5 mb-1 flex items-center gap-1">
         <span>{children}</span>
       </h3>
     ),
     ul: ({ children }: any) => (
-      <ul className="space-y-1.5 my-2 pl-1 text-xs">{children}</ul>
+      <ul className="space-y-1.5 my-2 pl-1 text-xs text-white">{children}</ul>
     ),
     li: ({ children }: any) => (
-      <li className="flex items-start gap-1.5 leading-relaxed">
-        <span className={`font-bold shrink-0 mt-0.5 ${isModel ? 'text-teal-400' : 'text-teal-200'}`}>•</span>
-        <span className="flex-1">{children}</span>
+      <li className="flex items-start gap-1.5 leading-relaxed text-white">
+        <span className="font-bold shrink-0 mt-0.5 text-teal-400">•</span>
+        <span className="flex-1 text-white">{children}</span>
       </li>
     ),
+    p: ({ children }: any) => (
+      <p className="text-white mb-2 last:mb-0 leading-relaxed">{children}</p>
+    ),
     strong: ({ children }: any) => (
-      <strong className={`font-bold ${isModel ? 'text-teal-300' : 'text-white'}`}>
+      <strong className="font-bold text-white">
         {children}
       </strong>
     )
@@ -107,13 +110,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         <div 
           className={`flex flex-col rounded-2xl p-3 sm:p-4 shadow-xl text-xs sm:text-sm border transition-all ${
             isModel 
-              ? 'bg-[#202c33] text-slate-100 rounded-tl-xs border-[#2a3942] shadow-slate-950/60' 
+              ? 'bg-[#202c33] text-white rounded-tl-xs border-[#2a3942] shadow-slate-950/60' 
               : 'bg-[#005c4b] text-white rounded-tr-xs border-[#007a63]/50 shadow-emerald-950/30'
           }`}
         >
           {/* Sender Header */}
           <div className="flex items-center justify-between gap-2 mb-1.5 pb-1 border-b border-white/10 text-[11px]">
-            <span className={`font-semibold tracking-wide flex items-center gap-1 ${isModel ? 'text-[#00a884]' : 'text-emerald-100'}`}>
+            <span className="font-semibold tracking-wide flex items-center gap-1 text-white">
               {isModel ? 'Copiloto iTRAVEL_MAP' : 'Tú'}
             </span>
             <span className="text-[10px] opacity-60">
@@ -128,7 +131,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
               <span>{message.text}</span>
             </div>
           ) : (
-            <div className={`prose prose-invert prose-xs max-w-none leading-relaxed ${isModel ? 'text-slate-100' : 'text-white'}`}>
+            <div className="prose prose-invert prose-xs max-w-none leading-relaxed text-white">
               <ReactMarkdown components={markdownComponents}>
                 {message.text}
               </ReactMarkdown>
