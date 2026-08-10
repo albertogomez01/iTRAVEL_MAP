@@ -25,7 +25,7 @@ interface SidebarProps {
   onCloseMobile?: () => void;
   onLogout?: () => void;
   onOpenLoginModal?: () => void;
-  onApplyPreferences?: (updatedPrefs: UserPreferences, destination?: string) => void;
+  onApplyPreferences?: (updatedPrefs: UserPreferences) => void;
   savedTrips?: SavedTrip[];
   onLoadTrip?: (trip: SavedTrip) => void;
   onDeleteTrip?: (tripId: string) => void;
@@ -54,7 +54,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Draft preferences for user edits before clicking "Aplicar"
   const [draftPrefs, setDraftPrefs] = useState<UserPreferences>({ ...preferences });
-  const [destinationInput, setDestinationInput] = useState('');
 
   const getTodayString = () => {
     const d = new Date();
@@ -87,14 +86,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleApply = () => {
     setPreferences(draftPrefs);
     if (onApplyPreferences) {
-      onApplyPreferences(draftPrefs, destinationInput);
+      onApplyPreferences(draftPrefs);
     }
     if (onCloseMobile) onCloseMobile();
   };
 
   const handleUndoConfirm = () => {
     setDraftPrefs({ ...preferences });
-    setDestinationInput('');
     setShowUndoConfirmModal(false);
   };
 
@@ -185,17 +183,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 value={draftPrefs.originLocation || ''}
                 onChange={(val) => setDraftPrefs(prev => ({ ...prev, originLocation: val }))}
                 iconColor="text-red-400"
-              />
-            </div>
-
-            {/* Destino Principal con Autocompletado */}
-            <div>
-              <CityAutocompleteInput
-                label="Ciudad o País de Destino"
-                placeholder="Ej. Roma, Italia"
-                value={destinationInput}
-                onChange={(val) => setDestinationInput(val)}
-                iconColor="text-teal-400"
               />
             </div>
 

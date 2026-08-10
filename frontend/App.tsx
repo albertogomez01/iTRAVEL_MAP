@@ -317,18 +317,45 @@ export default function App() {
     }
   };
 
-  const handleApplyPreferences = (updatedPrefs: UserPreferences, destination?: string) => {
-    if (destination && destination.trim()) {
-      const passengersCount = updatedPrefs.passengers || 1;
-      const passengersStr = passengersCount > 1 ? ` para ${passengersCount} personas` : ' para 1 persona';
-      const tripTypeStr = updatedPrefs.tripType === 'RoundTrip' ? 'de ida y vuelta' : 'de solo ida';
-      const totalGroupBudget = updatedPrefs.maxBudget * passengersCount;
-      const prompt = `Quiero organizar un viaje ${tripTypeStr}${passengersStr} con origen en ${updatedPrefs.originLocation || 'mi ciudad'} y destino ${destination}. Presupuesto máximo: ${updatedPrefs.maxBudget}€ por persona (Presupuesto total del grupo: ${totalGroupBudget}€).`;
-      setInputValue(prompt);
-      setTimeout(() => {
-        handleSendMessage();
-      }, 100);
+  const handleApplyPreferences = (updatedPrefs: UserPreferences) => {
+    setPreferences(updatedPrefs);
+    try {
+      initChat(updatedPrefs);
+    } catch (e) {
+      console.warn("Re-inicialización de chat:", e);
     }
+
+    const rawName = activeUser?.displayName || activeUser?.email || 'viajero';
+    const userName = rawName.includes('@') ? rawName.split('@')[0] : rawName.split(' ')[0];
+
+    const passengersCount = updatedPrefs.passengers || 1;
+    const passengersStr = passengersCount > 1 ? `${passengersCount} personas` : '1 persona';
+    const tripTypeStr = updatedPrefs.tripType === 'RoundTrip' ? 'Ida y Vuelta' : 'Solo Ida';
+    const datesStr = updatedPrefs.startDate 
+      ? (updatedPrefs.endDate ? ` | 📅 Del ${updatedPrefs.startDate} al ${updatedPrefs.endDate}` : ` | 📅 Salida: ${updatedPrefs.startDate}`) 
+      : '';
+    const originStr = updatedPrefs.originLocation ? `📍 Origen: ${updatedPrefs.originLocation}` : '📍 Origen: No especificado';
+    const totalGroupBudget = updatedPrefs.maxBudget * passengersCount;
+
+    const userMsgText = `⚙️ **Preferencias de viaje aplicadas**:\n- ${originStr}\n- 👥 Viajeros: ${passengersStr}\n- 🔄 Tipo: ${tripTypeStr}${datesStr}\n- 💶 Presupuesto: ${updatedPrefs.maxBudget}€ / pers. (Total grupo: ${totalGroupBudget}€)`;
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      text: userMsgText
+    };
+
+    const copilotText = `Con estos datos, ¿a dónde quieres ir, **${userName}**? 🗺️✨`;
+
+    const modelMsg: Message = {
+      id: (Date.now() + 1).toString(),
+      role: 'model',
+      text: copilotText
+    };
+
+    setMessages(prev => [...prev, userMsg, modelMsg]);
+    setIsChatOpen(true);
+    setIsItineraryOpen(false);
   };
 
   // Guardar viaje actual en el historial (Local + Nube Firestore)
