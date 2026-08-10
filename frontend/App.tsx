@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Loader2, Link as LinkIcon, Menu, MessageSquare, Map as MapIcon, Calendar, ChevronDown, Bookmark, Sparkles, X } from 'lucide-react';
-import { Message, TripPlan, UserPreferences } from './types';
+import { Message, TripPlan, UserPreferences, MapTarget } from './types';
 import { initChat, sendMessageToAgent, extractItineraryState, isAdkConfigured, initAdkSession, streamAdkQuery } from './services/aiService';
 import { ChatMessage } from './components/ChatMessage';
 import { ItineraryView } from './components/ItineraryView';
@@ -111,6 +111,7 @@ export default function App() {
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isUpdatingItinerary, setIsUpdatingItinerary] = useState(false);
+  const [focusedTarget, setFocusedTarget] = useState<MapTarget | null>(null);
   
   const [preferences, setPreferences] = useState<UserPreferences>({
     originLocation: '',
@@ -203,7 +204,7 @@ export default function App() {
         const modelMsg: Message = {
           id: (Date.now() + 1).toString(),
           role: 'model',
-          text: response.text,
+          text: response.text || '',
           groundingChunks: response.groundingChunks
         };
         
@@ -310,6 +311,14 @@ export default function App() {
     setInputValue(`¿Me podrías dar más detalles, precios u opiniones sobre ${topic}?`);
   };
 
+  const handleFocusTarget = (target: MapTarget) => {
+    setFocusedTarget(target);
+    // Optionally minimize itinerary panel on mobile or small screens so user sees map target
+    if (window.innerWidth < 768) {
+      setIsItineraryOpen(false);
+    }
+  };
+
   const selectedOption = tripPlan?.options.find(o => o.id === selectedOptionId) || null;
 
   return (
@@ -331,7 +340,7 @@ export default function App() {
 
       {/* 1. PERMANENT INTERACTIVE MAP BACKGROUND */}
       <div className="absolute inset-0 z-0">
-        <MapView option={selectedOption} />
+        <MapView option={selectedOption} focusedTarget={focusedTarget} onAskCopilot={handleAskCopilot} />
       </div>
 
       {/* 2. TOP-LEFT HAMBURGER MENU BUTTON */}
@@ -474,6 +483,7 @@ export default function App() {
               selectedOptionId={selectedOptionId}
               onSelectOption={setSelectedOptionId}
               onAskCopilot={handleAskCopilot}
+              onFocusTarget={handleFocusTarget}
               savedTrips={savedTrips}
               onLoadTrip={handleLoadTrip}
               onDeleteTrip={handleDeleteTrip}

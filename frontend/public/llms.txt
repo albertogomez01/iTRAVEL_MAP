@@ -1,0 +1,28 @@
+# iTRAVEL_MAP - Smart Multimodal Travel Planner & Copilot
+
+> iTRAVEL_MAP is an intelligent, AI-powered multimodal trip planning web platform. It leverages Google Gemini AI models to generate customized multi-city travel itineraries, render interactive map routes with Leaflet, optimize transportation and night trains/buses, provide point-of-interest suggestions, and allow cloud saving via Firebase.
+
+## Key Capabilities & Features
+
+- **Multimodal Route Planning**: Combines high-speed rail (Eurostar, Renfe, Interrail), long-distance buses (FlixBus, Alsa), and flights (Skyscanner, Ryanair).
+- **3-Option Itinerary Generation**: Automatically generates 3 distinct trip options for every request:
+  1. *Economic Option*: Focuses on low-cost transport and budget stays.
+  2. *Balanced Option*: Optimal trade-off between price, travel time, and comfort.
+  3. *Fast / Premium Option*: Direct routes, high-speed rail, and top comfort.
+- **Interactive Leaflet Map**: Visualizes journey polyline routes and daily destination markers with real coordinates.
+- **Worldwide City Search**: Instant worldwide city autocomplete powered by OpenStreetMap Nominatim API.
+- **Preferences & Filters**: Custom trip parameters including origin city, travel dates, max budget (€), pace (Relaxed, Moderate, Intense), accommodation type, and preference for night trains/buses.
+- **Cloud Sync & User Accounts**: Google Sign-in with Firebase Authentication & Firestore cloud trip storage.
+- **AI Agent Capabilities**: Answers questions about European and global travel, budget optimization, booking links, and site seeing recommendations.
+
+## Tech Architecture
+
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS, Lucide Icons, Leaflet / React-Leaflet.
+- **Backend API**: Node.js, Express, WebSocket server, Vertex AI / Google GenAI SDK (`@google/genai`).
+- **AI Integration**: Dual-engine architecture (Conversational Chat + Structured JSON schema extraction for map rendering).
+- **Cloud Services**: Firebase Auth & Firestore, Google Cloud Vertex AI / Gemini API proxy.
+
+## Links
+
+- Optional Full Documentation: [llms-full.txt](llms-full.txt)
+- Source Repository: [iTRAVEL_MAP GitHub](https://github.com/albertogomez01/iTRAVEL_MAP)

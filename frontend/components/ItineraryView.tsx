@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Map, Train, Bus, Plane, Ship, Footprints, Bed, Moon, MapPin, Info, AlertCircle, Coffee, Camera, Landmark, Clock, ExternalLink, ChevronDown, ChevronUp, Wallet, MessageSquarePlus, Bookmark, Trash2, Calendar, Navigation } from 'lucide-react';
-import { TripPlan, DayPlan, Transport, Accommodation, POI, ItineraryOption } from '../types';
+import { Map, Train, Bus, Plane, Ship, Footprints, Bed, Moon, MapPin, Info, AlertCircle, Coffee, Camera, Landmark, Clock, ExternalLink, ChevronDown, ChevronUp, Wallet, MessageSquarePlus, Bookmark, Trash2, Calendar, Navigation, Locate } from 'lucide-react';
+import { TripPlan, DayPlan, Transport, Accommodation, POI, ItineraryOption, MapTarget } from '../types';
 import { SavedTrip } from './Sidebar';
 
 interface ItineraryViewProps {
@@ -9,6 +9,7 @@ interface ItineraryViewProps {
   selectedOptionId: string | null;
   onSelectOption: (id: string) => void;
   onAskCopilot?: (topic: string) => void;
+  onFocusTarget?: (target: MapTarget) => void;
   savedTrips?: SavedTrip[];
   onLoadTrip?: (trip: SavedTrip) => void;
   onDeleteTrip?: (tripId: string) => void;
@@ -42,6 +43,7 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
   selectedOptionId, 
   onSelectOption,
   onAskCopilot,
+  onFocusTarget,
   savedTrips = [],
   onLoadTrip,
   onDeleteTrip,
@@ -53,6 +55,13 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
     e.stopPropagation();
     if (onAskCopilot) {
       onAskCopilot(topic);
+    }
+  };
+
+  const handleFocus = (e: React.MouseEvent, target: MapTarget) => {
+    e.stopPropagation();
+    if (onFocusTarget) {
+      onFocusTarget(target);
     }
   };
 
@@ -279,6 +288,16 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                                     <div className="flex items-center justify-between mb-3">
                                       <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
                                         {day.location}
+                                        {day.coordinates && onFocusTarget && (
+                                          <button
+                                            onClick={(e) => handleFocus(e, { lat: day.coordinates!.lat, lng: day.coordinates!.lng, zoom: 13, label: day.location })}
+                                            className="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 p-1 px-2 rounded-lg transition-colors font-normal flex items-center gap-1"
+                                            title="Ver ciudad en el mapa"
+                                          >
+                                            <Locate size={12} />
+                                            <span>Mapa</span>
+                                          </button>
+                                        )}
                                         {onAskCopilot && (
                                           <button
                                             onClick={(e) => handleAsk(e, `el Día ${day.dayNumber} en ${day.location}`)}
@@ -344,17 +363,29 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                                               <div className="flex items-center justify-between gap-1.5 font-medium text-slate-800">
                                                 <div className="flex items-center gap-1.5">
                                                   <POIIcon category={poi.category} />
-                                                  {poi.name}
+                                                  <span>{poi.name}</span>
                                                 </div>
-                                                {onAskCopilot && (
-                                                  <button
-                                                    onClick={(e) => handleAsk(e, `el lugar de interés ${poi.name} en ${day.location}`)}
-                                                    className="text-xs text-slate-400 hover:text-brand-600 p-1 rounded transition-colors"
-                                                    title="Discutir esta atracción en el chat"
-                                                  >
-                                                    <MessageSquarePlus size={13} />
-                                                  </button>
-                                                )}
+                                                <div className="flex items-center gap-1">
+                                                  {poi.coordinates && onFocusTarget && (
+                                                    <button
+                                                      onClick={(e) => handleFocus(e, { lat: poi.coordinates!.lat, lng: poi.coordinates!.lng, zoom: 16, label: poi.name })}
+                                                      className="text-xs text-teal-700 hover:bg-teal-50 p-1 px-1.5 rounded transition-colors flex items-center gap-0.5"
+                                                      title="Ver este sitio en el mapa"
+                                                    >
+                                                      <Locate size={12} />
+                                                      <span className="text-[11px]">Mapa</span>
+                                                    </button>
+                                                  )}
+                                                  {onAskCopilot && (
+                                                    <button
+                                                      onClick={(e) => handleAsk(e, `el lugar de interés ${poi.name} en ${day.location}`)}
+                                                      className="text-xs text-slate-400 hover:text-brand-600 p-1 rounded transition-colors"
+                                                      title="Discutir esta atracción en el chat"
+                                                    >
+                                                      <MessageSquarePlus size={13} />
+                                                    </button>
+                                                  )}
+                                                </div>
                                               </div>
                                               <p className="text-slate-600 text-xs mt-0.5 pl-5">{poi.description}</p>
                                               {poi.tips && (
@@ -384,16 +415,28 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                                           <div className="text-xs text-slate-500 pl-6 mt-0.5">{day.accommodation.location}</div>
                                         </div>
 
-                                        {onAskCopilot && (
-                                          <button
-                                            onClick={(e) => handleAsk(e, `el alojamiento ${day.accommodation?.name} en ${day.location}`)}
-                                            className="text-xs text-slate-500 hover:text-brand-600 bg-slate-100 hover:bg-brand-50 p-1.5 rounded-lg transition-colors flex items-center gap-1"
-                                            title="Discutir alojamiento en el chat"
-                                          >
-                                            <MessageSquarePlus size={13} />
-                                            <span className="hidden sm:inline">Consultar</span>
-                                          </button>
-                                        )}
+                                        <div className="flex items-center gap-1">
+                                          {day.accommodation.coordinates && onFocusTarget && (
+                                            <button
+                                              onClick={(e) => handleFocus(e, { lat: day.accommodation!.coordinates!.lat, lng: day.accommodation!.coordinates!.lng, zoom: 16, label: day.accommodation!.name })}
+                                              className="text-xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100 p-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                              title="Ver hotel en el mapa"
+                                            >
+                                              <Locate size={13} />
+                                              <span className="hidden sm:inline">Ver Mapa</span>
+                                            </button>
+                                          )}
+                                          {onAskCopilot && (
+                                            <button
+                                              onClick={(e) => handleAsk(e, `el alojamiento ${day.accommodation?.name} en ${day.location}`)}
+                                              className="text-xs text-slate-500 hover:text-brand-600 bg-slate-100 hover:bg-brand-50 p-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                              title="Discutir alojamiento en el chat"
+                                            >
+                                              <MessageSquarePlus size={13} />
+                                              <span className="hidden sm:inline">Consultar</span>
+                                            </button>
+                                          )}
+                                        </div>
                                       </div>
                                     )}
 

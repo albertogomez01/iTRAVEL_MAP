@@ -3,6 +3,10 @@ export interface POI {
   category: 'Monument' | 'Restaurant' | 'Nature' | 'Museum' | 'Other';
   description: string;
   tips: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
 }
 
 export interface Transport {
@@ -20,6 +24,18 @@ export interface Accommodation {
   name: string;
   location: string;
   notes?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+}
+
+export interface MapTarget {
+  id?: string;
+  lat: number;
+  lng: number;
+  label?: string;
+  zoom?: number;
 }
 
 export interface DayPlan {

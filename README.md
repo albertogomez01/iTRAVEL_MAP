@@ -1,53 +1,57 @@
-# Vertex AI Studio Frontend App with Node.js Backend
+# iTRAVEL_MAP - Planificador Multimodal de Viajes Inteligente con IA
 
-This repository contains a frontend and a Node.js backend, designed to run together.
-The backend acts as a proxy, handling Google Cloud API calls.
+Plataforma web inteligente de planificación de viajes multimodales que utiliza Inteligencia Artificial (Google Gemini) para generar rutas complejas, visualizar mapas interactivos con Leaflet, optimizar transportes y alojamientos, y permitir guardar itinerarios en la nube mediante Firebase.
 
-This project is intended for demonstration and prototyping purposes only.
-It is not intended for use in a production environment.
+---
 
-## Prerequisites
+## 🤖 ¿Qué hace iTRAVEL_MAP? (Visión para Inteligencia Artificial y Usuarios)
 
-To run this application locally, you need:
+iTRAVEL_MAP actúa como un copiloto experto de viajes con las siguientes capacidades principales:
 
-*   **[Google Cloud SDK / gcloud CLI](https://cloud.google.com/sdk/docs/install)**: Follow the instructions to install the SDK.
+1. **Planificación Multimodal Inteligente**: Diseña itinerarios paso a paso combinando trenes de alta velocidad e Interrail, autobuses de larga distancia (FlixBus, Alsa) y vuelos (Skyscanner, Ryanair).
+2. **Generación de 3 Opciones por Viaje**: Para cada consulta, la IA analiza y extrae automáticamente 3 alternativas de itinerario:
+   - **Opción Económica**: Prioriza rutas de bajo coste y transportes asequibles.
+   - **Opción Equilibrada**: Balance óptimo entre tiempo de viaje, coste y comodidad.
+   - **Opción Rápida / Premium**: Prioriza conexiones directas y transportes rápidos.
+3. **Mapa Interactivo Leaflet & Coordenadas Reales**: Renderiza visualmente las trayectorias entre ciudades mediante polígonos animados y marcadores numerados por día.
+4. **Búsqueda Mundial de Ciudades**: Autocompletado rápido de ciudades de todo el mundo mediante la API de OpenStreetMap Nominatim.
+5. **Ajuste de Preferencias**: Panel lateral configurable con origen del viaje, fechas, presupuesto máximo (€), ritmo (Relajado, Moderado, Intenso) y prioridad de transportes nocturnos para ahorrar noches de hotel.
+6. **Guardado en la Nube con Firebase**: Autenticación mediante Google Sign-in y almacenamiento de viajes guardados en Cloud Firestore.
 
-*   **gcloud Initialization**:
-    *   Initialize the gcloud CLI:
-        ```bash
-        gcloud init
-        ```
-    *   Authenticate for Application Default Credentials (needed to call Google Cloud APIs):
-        ```bash
-        gcloud auth application-default login
-        ```
+---
 
-*   **Node.js and npm**: Ensure you have Node.js and its package manager, `npm`, installed on your machine.
+## 🛠️ Arquitectura del Proyecto
 
-## Project Structure
+El repositorio está organizado en dos módulos principales:
 
-The project is organized into two main directories:
+* `frontend/`: Aplicación SPA en React + TypeScript + Vite + Tailwind CSS + Leaflet.
+  - `frontend/services/aiService.ts`: Lógica de integración con Google GenAI / Gemini API (chat conversacional + orquestación JSON estructurada).
+  - `frontend/services/firebase.ts`: Autenticación con Google y Firestore para guardar y borrar itinerarios.
+  - `frontend/components/`: Componentes UI (mapa interactivo, vista detallada de itinerarios, asistente flotante, modal de login y guía de inicio).
+* `backend/`: Servidor Node.js / Express que actúa como proxy seguro para llamadas a Google Cloud Vertex AI (con limitador de tasa `express-rate-limit` y soporte WebSocket).
 
-*   `frontend/`: Contains the Frontend application code.
-*   `backend/`: Contains the Node.js/Express server code to proxy Google Cloud API calls.
+---
 
-## Backend Environment Variables
+## 🚀 Requisitos e Instalación Local
 
-The `backend/.env.local` file is automatically generated when you download this application.
-It contains essential Google Cloud environment variables pre-configured based on your project settings at the time of download.
+### Prerrequisitos
 
-The variables set in `backend/.env.local` are:
-*   `API_BACKEND_PORT`: The port the backend API server listens on (e.g., `5000`).
-*   `API_PAYLOAD_MAX_SIZE`: The maximum size of the request payload accepted by the backend server (e.g., `5mb`).
-*   `GOOGLE_CLOUD_LOCATION`: The Google Cloud region associated with your project.
-*   `GOOGLE_CLOUD_PROJECT`: Your Google Cloud Project ID.
+* **Node.js** (v18+ recomendado) y **npm**.
+* **Clave API de Gemini** (opcional para desarrollo local; se puede ingresar en la propia interfaz de la app o configurando `VITE_GEMINI_API_KEY` en `frontend/.env`).
 
-**Note:** These variables are automatically populated during the download process.
-You can modify the values in `backend/.env.local` if you need to change them.
+### Instalación y Ejecución
 
-## Installation and Running the App
-
-To install dependencies and run your Google Cloud Vertex AI Studio App locally, execute the following command:
+Para instalar todas las dependencias y arrancar la aplicación (frontend + backend simultáneamente):
 
 ```bash
-npm install && npm run dev
+npm install
+npm run dev
+```
+
+La aplicación estará disponible en `http://localhost:5173`.
+
+---
+
+## 📄 Estándar AI (`llms.txt`)
+
+Este proyecto incluye un archivo normalizado [llms.txt](llms.txt) en la raíz y en `frontend/public/llms.txt` para que cualquier modelo de lenguaje o agente IA (ChatGPT, Claude, Gemini, Cursor, Antigravity, etc.) pueda comprender al instante la funcionalidad y estructura de iTRAVEL_MAP.

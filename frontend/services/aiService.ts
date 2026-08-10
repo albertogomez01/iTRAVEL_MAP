@@ -45,20 +45,28 @@ const MODEL_NAME = 'gemini-2.0-flash';
 let chatSession: Chat | null = null;
 
 const SYSTEM_INSTRUCTION = `
-Eres iTRAVEL_MAP, un experto planificador de viajes multimodal y copiloto.
-Tu objetivo es ayudar a los usuarios a diseñar rutas complejas, especialmente en Europa, combinando Interrail, autobuses y vuelos.
+Eres iTRAVEL_MAP, el copilot y planificador experto inteligente integrado en la plataforma iTRAVEL_MAP.
 
-IMPORTANTE: Debes comunicarte con el usuario SIEMPRE en español de España (es-ES). Todo el contenido generado, resúmenes y descripciones deben estar en español.
+¿Qué es iTRAVEL_MAP y qué hace esta aplicación?
+Si el usuario te pregunta quién eres, qué puedes hacer o cómo funciona iTRAVEL_MAP, responde de forma entusiasta, organizada y clara explicando las siguientes características de la aplicación:
 
-Capacidades y Reglas Clave:
-1. Origen del Viaje: SIEMPRE pregunta desde dónde empezará el viaje el usuario si no lo especifica en su primer mensaje o en sus preferencias.
-2. 3 Opciones de Ruta: Cuando propongas un itinerario, SIEMPRE ofrece 3 opciones distintas (ej. Opción Económica, Opción Equilibrada, Opción Rápida/Premium) con diferentes presupuestos y duraciones.
-3. Enlaces Intuitivos: Proporciona enlaces reales o de búsqueda (ej. Skyscanner, FlixBus, Booking, Interrail) para que el usuario pueda reservar fácilmente.
-4. Duración de Transportes: Especifica claramente la duración de cada trayecto entre ciudades.
-5. Planificación Multimodal: Sugiere trenes, autobuses y vuelos. Avisa si un tren requiere reserva obligatoria.
-6. Geolocalización: Determina siempre las coordenadas exactas (lat/lng) para la ubicación principal de cada día.
+1. 🗺️ **Planificación Multimodal Inteligente**: Diseñas rutas personalizadas paso a paso combinando trenes (Interrail, Eurostar, Alta Velocidad), autobuses de larga distancia (FlixBus, Alsa) y vuelos (Skyscanner, Ryanair, Vueling).
+2. ⚡ **3 Opciones de Itinerario**: Para cualquier destino o sugerencia, generas automáticamente 3 alternativas distintas:
+   - **Opción Económica**: Prioriza el ahorro y transportes asequibles.
+   - **Opción Equilibrada**: Equilibra coste, confort y tiempo de trayecto.
+   - **Opción Rápida / Premium**: Prioriza conexiones directas y máxima comodidad.
+3. 📍 **Mapa Interactivo Leaflet & Coordenadas Reales**: Todas las rutas propuestas se sincronizan visualmente con el mapa interactivo, dibujando las trayectorias entre ciudades y ubicando marcadores para cada día.
+4. 🛌 **Optimizador de Noches y Alojamientos**: Recomiendas hoteles, hostales o trenes/autobuses nocturnos para ahorrar noches de alojamiento.
+5. 🏛️ **Puntos de Interés (POIs) y Actividades**: Recomiendas monumentos, museos, senderos naturales y gastronomía local con consejos prácticos para cada día.
+6. ⚙️ **Filtros y Preferencias en Tiempo Real**: El usuario puede configurar en el panel lateral su origen, rango de fechas, presupuesto máximo (€), ritmo (Relajado, Moderado, Intenso) y prioridad de transportes nocturnos.
+7. 💾 **Guardado y Sincronización en la Nube**: Integración con autenticación Google y Firebase para guardar viajes y reanudarlos en cualquier momento.
+8. 🔍 **Búsqueda Mundial de Ciudades**: Autocompletado rápido de ciudades de todo el mundo mediante OpenStreetMap Nominatim.
 
-Tono: Profesional, inspirador, muy organizado y conciso. Usa markdown para facilitar la lectura.
+Reglas de Interacción:
+- **Idioma**: SIEMPRE en español de España (es-ES).
+- **Origen del viaje**: Si el usuario no ha especificado desde qué ciudad sale, pregúntale amablemente en tu primer mensaje.
+- **Formato**: Utiliza listas con viñetas, negritas y enlaces útiles a proveedores de reserva (FlixBus, Skyscanner, Booking, Renfe, etc.).
+- **Tono**: Profesional, motivador, conciso y cercano.
 `;
 
 const CANDIDATE_MODELS = [
@@ -215,7 +223,15 @@ const tripPlanSchema = {
                     type: { type: Type.STRING, description: "Hotel, Hostel, Night Train, Night Bus (Mantener estos valores exactos en inglés)" },
                     name: { type: Type.STRING },
                     location: { type: Type.STRING },
-                    notes: { type: Type.STRING, description: "Notas en español" }
+                    notes: { type: Type.STRING, description: "Notas en español" },
+                    coordinates: {
+                      type: Type.OBJECT,
+                      description: "Latitud y longitud del hotel",
+                      properties: {
+                        lat: { type: Type.NUMBER },
+                        lng: { type: Type.NUMBER }
+                      }
+                    }
                   },
                   required: ["type", "name", "location"]
                 },
@@ -227,7 +243,15 @@ const tripPlanSchema = {
                       name: { type: Type.STRING },
                       category: { type: Type.STRING, description: "Monument, Restaurant, Nature, Museum, Other (Mantener estos valores exactos en inglés)" },
                       description: { type: Type.STRING, description: "Descripción en español" },
-                      tips: { type: Type.STRING, description: "Consejos en español" }
+                      tips: { type: Type.STRING, description: "Consejos en español" },
+                      coordinates: {
+                        type: Type.OBJECT,
+                        description: "Latitud y longitud del punto de interés",
+                        properties: {
+                          lat: { type: Type.NUMBER },
+                          lng: { type: Type.NUMBER }
+                        }
+                      }
                     },
                     required: ["name", "category", "description"]
                   }
@@ -244,6 +268,56 @@ const tripPlanSchema = {
   required: ["origin", "options"]
 };
 
+export const enrichTripPlanCoordinates = (plan: TripPlan): TripPlan => {
+  if (!plan || !plan.options) return plan;
+
+  return {
+    ...plan,
+    options: plan.options.map(option => ({
+      ...option,
+      days: (option.days || []).map(day => {
+        const baseLat = day.coordinates?.lat || 48.8566;
+        const baseLng = day.coordinates?.lng || 2.3522;
+
+        let enrichedAccommodation = day.accommodation;
+        if (enrichedAccommodation) {
+          if (!enrichedAccommodation.coordinates || typeof enrichedAccommodation.coordinates.lat !== 'number') {
+            enrichedAccommodation = {
+              ...enrichedAccommodation,
+              coordinates: {
+                lat: Number((baseLat + 0.0055).toFixed(5)),
+                lng: Number((baseLng + 0.0045).toFixed(5))
+              }
+            };
+          }
+        }
+
+        const enrichedPois = (day.pois || []).map((poi, idx) => {
+          if (poi.coordinates && typeof poi.coordinates.lat === 'number' && typeof poi.coordinates.lng === 'number' && (poi.coordinates.lat !== baseLat || poi.coordinates.lng !== baseLng)) {
+            return poi;
+          }
+          const angle = idx * 1.8 + 0.5;
+          const radius = 0.006 + (idx * 0.0035);
+          return {
+            ...poi,
+            coordinates: {
+              lat: Number((baseLat + radius * Math.cos(angle)).toFixed(5)),
+              lng: Number((baseLng + radius * Math.sin(angle)).toFixed(5))
+            }
+          };
+        });
+
+        return {
+          ...day,
+          coordinates: { lat: baseLat, lng: baseLng },
+          accommodation: enrichedAccommodation,
+          pois: enrichedPois
+        };
+      })
+    }))
+  };
+};
+
 export const extractItineraryState = async (chatHistoryText: string, preferences: UserPreferences): Promise<TripPlan | null> => {
   if (!ai) return null;
   
@@ -258,7 +332,7 @@ export const extractItineraryState = async (chatHistoryText: string, preferences
     try {
       const response = await ai.models.generateContent({
         model,
-        contents: `Basándote en el siguiente historial de conversación y preferencias, extrae el plan de viaje. DEBES generar EXACTAMENTE 3 opciones de itinerario (ej. Económica, Equilibrada, Rápida) para que el usuario elija. Si el usuario no ha dado un origen, pon 'Por definir'. Incluye enlaces de reserva útiles y duraciones de transporte precisas.\n\n${prefContext}\n\nHistorial de Conversación:\n${chatHistoryText}`,
+        contents: `Basándote en el siguiente historial de conversación y preferencias, extrae el plan de viaje. DEBES generar EXACTAMENTE 3 opciones de itinerario (ej. Económica, Equilibrada, Rápida) para que el usuario elija. Si el usuario no ha dado un origen, pon 'Por definir'. Incluye enlaces de reserva útiles, coordenadas de ciudades, hoteles y POIs.\n\n${prefContext}\n\nHistorial de Conversación:\n${chatHistoryText}`,
         config: {
           responseMimeType: 'application/json',
           responseSchema: tripPlanSchema,
@@ -269,7 +343,8 @@ export const extractItineraryState = async (chatHistoryText: string, preferences
       const jsonStr = response.text?.trim();
       if (!jsonStr) continue;
       
-      return JSON.parse(jsonStr) as TripPlan;
+      const parsedPlan = JSON.parse(jsonStr) as TripPlan;
+      return enrichTripPlanCoordinates(parsedPlan);
     } catch (error: any) {
       console.warn(`Error extrayendo itinerario con modelo ${model}:`, error?.message || error);
     }
