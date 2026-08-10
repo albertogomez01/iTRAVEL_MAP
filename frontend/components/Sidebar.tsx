@@ -241,15 +241,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            {/* Presupuesto Máximo */}
+            {/* Presupuesto Máximo por Persona */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Banknote size={15} className="text-emerald-400" />
-                  <span className="text-xs font-medium text-slate-300">Presupuesto Máx.</span>
+                  <span className="text-xs font-medium text-slate-300">Presupuesto / Persona</span>
                 </div>
                 <span className="text-xs font-bold text-brand-400 bg-brand-950 px-2 py-0.5 rounded border border-brand-800/60">
-                  {draftPrefs.maxBudget} €
+                  {draftPrefs.maxBudget} € / pers.
                 </span>
               </div>
               <input 
@@ -261,8 +261,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onChange={(e) => setDraftPrefs(prev => ({ ...prev, maxBudget: parseInt(e.target.value) }))}
                 className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-500"
               />
-              <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+              <div className="flex justify-between text-[10px] text-slate-400 mt-1">
                 <span>0 €</span>
+                <span className="text-[10px] text-slate-300 font-medium">
+                  Total grupo: <strong className="text-emerald-400 font-bold">{draftPrefs.maxBudget * (draftPrefs.passengers || 1)} €</strong> ({draftPrefs.passengers || 1} {draftPrefs.passengers === 1 ? 'persona' : 'personas'})
+                </span>
                 <span>10.000 €</span>
               </div>
             </div>

@@ -99,10 +99,11 @@ export const initChat = (preferences: UserPreferences) => {
   const passengersStr = `\n  - Número de Viajeros / Personas: ${preferences.passengers || 1}`;
   const tripTypeStr = preferences.tripType ? `\n  - Tipo de Viaje: ${preferences.tripType === 'RoundTrip' ? 'Ida y Vuelta' : 'Solo Ida'}` : '';
 
+  const totalBudget = (preferences.maxBudget) * (preferences.passengers || 1);
   const prefString = `Preferencias del Usuario: ${originStr}${tripTypeStr}${passengersStr}
   - Prefiere Trenes/Autobuses Nocturnos en lugar de Hoteles: ${preferences.preferNightTrains ? 'Sí' : 'No'}
   - Estilo de Alojamiento: ${preferences.budgetLevel}
-  - Presupuesto Máximo Total: ${preferences.maxBudget}€
+  - Presupuesto Máximo POR PERSONA: ${preferences.maxBudget}€/persona (Presupuesto Total Grupo para ${preferences.passengers || 1} personas: ${totalBudget}€)
   - Ritmo de Viaje: ${preferences.pace}${datesStr}`;
 
   const currentModel = CANDIDATE_MODELS[activeModelIndex] || CANDIDATE_MODELS[0];
@@ -418,11 +419,13 @@ export const extractItineraryState = async (chatHistoryText: string, preferences
   const datesContext = preferences.startDate && preferences.endDate 
     ? `, Fechas: ${preferences.startDate} a ${preferences.endDate}` 
     : '';
-  const prefContext = `Preferencias: Trenes Nocturnos: ${preferences.preferNightTrains}, Presupuesto Máx: ${preferences.maxBudget}€, Ritmo: ${preferences.pace}${datesContext}${originContext}${tripTypeContext}.`;
+  const totalGroupBudget = (preferences.maxBudget) * (preferences.passengers || 1);
+  const prefContext = `Preferencias: Viajeros: ${preferences.passengers || 1} persona(s), Presupuesto Máx POR PERSONA: ${preferences.maxBudget}€/persona (Presupuesto Total Grupo: ${totalGroupBudget}€), Trenes Nocturnos: ${preferences.preferNightTrains}, Ritmo: ${preferences.pace}${datesContext}${originContext}${tripTypeContext}.`;
 
   const promptText = `Basándote en el siguiente historial de conversación y preferencias, extrae el plan de viaje. DEBES generar EXACTAMENTE 3 opciones de itinerario (ej. Económica, Equilibrada, Rápida).
 
-REGLAS CRÍTICAS DE RUTAS DE ORIGEN Y REGRESO:
+REGLAS CRÍTICAS DE RUTAS Y PRESUPUESTO:
+- El valor del presupuesto estimado 'estimatedBudget' en cada opción DEBE indicarse POR PERSONA (ejemplo: "350€ / persona" o "350€/pers").
 - Si hay una ciudad de origen (ej. Madrid):
   1. El Día 1 DEBE incluir el trayecto saliendo desde el origen hacia la primera ciudad de destino.
   2. Si el viaje es de 'Ida y Vuelta', el último día DEBE incluir el trayecto de regreso desde la última ciudad hacia la ciudad de origen.

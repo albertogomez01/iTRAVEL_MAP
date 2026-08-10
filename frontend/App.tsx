@@ -322,7 +322,8 @@ export default function App() {
       const passengersCount = updatedPrefs.passengers || 1;
       const passengersStr = passengersCount > 1 ? ` para ${passengersCount} personas` : ' para 1 persona';
       const tripTypeStr = updatedPrefs.tripType === 'RoundTrip' ? 'de ida y vuelta' : 'de solo ida';
-      const prompt = `Quiero organizar un viaje ${tripTypeStr}${passengersStr} con origen en ${updatedPrefs.originLocation || 'mi ciudad'} y destino ${destination}. Presupuesto máximo ${updatedPrefs.maxBudget}€.`;
+      const totalGroupBudget = updatedPrefs.maxBudget * passengersCount;
+      const prompt = `Quiero organizar un viaje ${tripTypeStr}${passengersStr} con origen en ${updatedPrefs.originLocation || 'mi ciudad'} y destino ${destination}. Presupuesto máximo: ${updatedPrefs.maxBudget}€ por persona (Presupuesto total del grupo: ${totalGroupBudget}€).`;
       setInputValue(prompt);
       setTimeout(() => {
         handleSendMessage();
