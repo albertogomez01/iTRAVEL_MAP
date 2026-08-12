@@ -112,10 +112,145 @@ const ALLOWED_UPSTREAM_HOSTS = new Set([
   "aiplatform.clients6.google.com",
 ]);
 
-// Uses Google Application Default Credentials (ADC).
-// Users need to run "gcloud auth application-default login" in order to use the proxy.
+import fs from 'fs';
+import path from 'path';
+
+// --- Service Account Credentials Configuration ---
+const DEFAULT_SERVICE_ACCOUNT = {
+  type: "service_account",
+  project_id: "key-perigee-406513",
+  private_key_id: "427e0671754f9b7cd4b0ccc6d70df9075f946195",
+  private_key: "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC0uKgb+ZzTTH3x\nFXGto+lTOfWibr24Jv4bVC2oLwg4TfW7RscpPD6RZvcmMTxOkkRrgmmR9TqiDr/j\nFac/s/t9hsxIuYQXXoqvTgsRqBKB5tc71wcNPz0I8pxJWstMUY81nh6JqPXRNIye\nAZ9QUYZqJglaRIuqUnAp2ivtKB7kqy+l5FLyjwJtiXmWOX6qXKJgirin/0yiuapk\nZjzYGQbjHwS94OLaHWoSel6QSjMrip3yJ+6hcLWobj4ww/bswHQuGJa2VwDZT48n\nGX3pyq/TUg9caauTdJXm3IAx6diJYrl9xp8f8mvAwHNddqyfBqHNZ6+VLjMQNm/j\nUVA0eCN7AgMBAAECggEANM4+BMqXaeBQbnjLGicqXrCxVvCPy/bMyhR7MMjpWHZj\nJoEkYaaiS58v+T9qtTSk/FsDWOw0YTT5GbPyhjkjc4bHOzrF34Q29slRj6uyGLXo\nTyph+5tuTKaDRyXaAGdWdp7IooW1qhb2PZcQw4nGwk5x7ifYPYDQGFKRAj92Y28p\n6NemSCldDnIMRiJm7pSLzevg/6RaOIJFh5SSvi+A3B+Zg3hEY/3InCnXD1ibJ4s4\np54IhMgKQtNl+Xd6v2Ub4SdWLtmGNpFYb0Lv44Lsequn1E/0qV4OmSA2A0VaDSje\niD8NnZZfePkeQjDxUi7MAdSUj+L95vTfa5y0gmhAfQKBgQDhw0F6qbL78i1HUVWk\nC8lFRKZ8SFz4xr3NZ2XF/cjumi8QVhkDBTdObxiBM96OsbPVi6AF3GDQL1a3IDP7\nQ3+heoHmKFPr6dv1poDZJj8QbdrUmyI3FBoE7amC1eQysXSnR5lIW928Dt4VirT0\n2mRlRz5tIlDjxQjZ/Cg8Q0qY3QKBgQDM7RAQVaT9sdQkarorjXNti8Nq0MDsV5vu\nLqGHv0IoWHBKWbvAQHWeDiaDJCgtqVNXU0OuazR41fKFA7IktEAvM4kdu5UcmCJr\nXcDEY0Ev3lCsve0vRWX/MAM3K/iHbhRLuKp03rKYG7OMA5NlVhaL5dacO2C5kTSL\npkgOyXu8NwKBgBwPuwnWIgsy9PHSaES1ulTDzbXRAM1jVqA7Y+kSPHF79LGhIgbA\nFTnIkVEt81HlQKcgbcmMtPPrjmnAtPVcVHbr1U2YYaYHMXH9OjLDkD8oiHS4u64A\n76MBL3q1v2GVsRxByAm4cX04k941mXx90NDN5DKIe2l0Sj9eGlozOwh5AoGBAIIj\n+xOkkEdc67DE5r5J8ogbPltTf3GYobo9eu/OkqE0qPtOyWFqjkd2DRczmyCEbB0F\nD/Jwur4SgRXgJv4QSsKvI+DyA9xI8XLl80nFDtzrfqh1ZW+jzwak4yXiks7PJayA\n9h+KXjkjPn8oti6g4Wiu6gAF5YNzp78YNqLNafs5AoGBAMnfE49WSJPwxgb0n5kd\nmdqsye0blVzpG/aOfxXnqolMeclxoqdXZwSTX9pCLa7o/2DxiCrpVXclwRiaW02y\n/hF6k0qrLTY47pi07jFwzaFAX9rKVQD2HeBb6h2ZFm1FsZIaAhuGF3QSCTD63Q71\n+EGnf9F0IiO2DAH30kTrt1Pp\n-----END PRIVATE KEY-----\n",
+  client_email: "ais-gemini-key-012b550b3ba5463@894519712518.iam.gserviceaccount.com",
+  client_id: "115147991423034931994",
+  auth_uri: "https://accounts.google.com/o/oauth2/auth",
+  token_uri: "https://oauth2.googleapis.com/token",
+  auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+  client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/ais-gemini-key-012b550b3ba5463%40894519712518.iam.gserviceaccount.com",
+  universe_domain: "googleapis.com"
+};
+
+function loadServiceAccount() {
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+    try {
+      return JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+    } catch (e) {
+      console.warn("Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON env var:", e);
+    }
+  }
+  const rootKeyPath = path.resolve(process.cwd(), '../key-perigee-406513-427e0671754f.json');
+  if (fs.existsSync(rootKeyPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(rootKeyPath, 'utf8'));
+    } catch (e) {
+      console.warn("Failed to read root service account JSON file:", e);
+    }
+  }
+  return DEFAULT_SERVICE_ACCOUNT;
+}
+
+const serviceAccountCreds = loadServiceAccount();
+
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// Uses Google Service Account Credentials
 const auth = new GoogleAuth({
+  credentials: serviceAccountCreds,
   scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+});
+
+// --- API Endpoints ---
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    project: serviceAccountCreds.project_id,
+    clientEmail: serviceAccountCreds.client_email,
+    authMode: 'Google Cloud Service Account'
+  });
+});
+
+app.post('/api/chat', async (req, res) => {
+  try {
+    const accessToken = await getAccessToken(res);
+    if (!accessToken) return;
+
+    const { message, preferences, history } = req.body;
+    const projectId = serviceAccountCreds.project_id || GOOGLE_CLOUD_PROJECT || 'key-perigee-406513';
+    const location = GOOGLE_CLOUD_LOCATION || 'us-central1';
+
+    const originStr = preferences?.originLocation ? `\n  - Localidad de Origen: ${preferences.originLocation}` : '';
+    const datesStr = preferences?.startDate && preferences?.endDate ? `\n  - Fechas: Del ${preferences.startDate} al ${preferences.endDate}` : '';
+    const passengersStr = `\n  - Número de Viajeros: ${preferences?.passengers || 1}`;
+    const totalBudget = (preferences?.maxBudget || 1500) * (preferences?.passengers || 1);
+
+    const systemInstruction = `Eres iTRAVEL_MAP, el copilot y planificador experto inteligente integrado en iTRAVEL_MAP.
+Idioma: Español de España (es-ES).
+Preferencias del Usuario: ${originStr}${passengersStr}
+  - Presupuesto Máximo por persona: ${preferences?.maxBudget || 1500}€ (Total grupo: ${totalBudget}€)
+  - Noches/Estándar: ${preferences?.budgetLevel || 'Estándar'}
+  - Ritmo: ${preferences?.pace || 'Moderado'}${datesStr}
+
+Recomienda itinerarios paso a paso con enlaces markdown explícitos [🏨 Hotel](url) y [🚆 Tren/Avión](url). Sé muy estructurado, claro y entusiasta.`;
+
+    const contents = [];
+    if (Array.isArray(history)) {
+      history.forEach(item => {
+        contents.push({
+          role: item.role === 'model' ? 'model' : 'user',
+          parts: [{ text: item.text }]
+        });
+      });
+    }
+    contents.push({
+      role: 'user',
+      parts: [{ text: message }]
+    });
+
+    const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-1.5-flash:generateContent`;
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: systemInstruction }]
+        },
+        contents,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1500
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      console.error('[Vertex AI Proxy Error]:', errBody);
+      return res.status(response.status).json({ error: 'Vertex AI backend call failed', details: errBody });
+    }
+
+    const data = await response.json();
+    const candidate = data.candidates?.[0];
+    const text = candidate?.content?.parts?.[0]?.text || "Lo siento, no pude procesar tu solicitud.";
+
+    return res.json({
+      text,
+      groundingChunks: candidate?.groundingMetadata?.groundingChunks || []
+    });
+  } catch (err) {
+    console.error('[POST /api/chat Error]:', err);
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 function escapeRegex(str) {

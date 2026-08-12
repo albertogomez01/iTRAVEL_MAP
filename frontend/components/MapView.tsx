@@ -649,7 +649,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 icon={getPoiIcon(poi.name, poi.category)}
               >
                 <Popup className="rounded-2xl">
-                  <GlassPopup>
+                  <div className="font-sans p-1 max-w-xs">
                     <div className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-0.5 flex items-center gap-1">
                       <span>{getPoiEmoji(poi.category)}</span>
                       <span>{poi.category} • Día {day.dayNumber}</span>
@@ -680,7 +680,6 @@ export const MapView: React.FC<MapViewProps> = ({
                       )}
                     </div>
                   </div>
-                </GlassPopup>
                 </Popup>
               </Marker>
             );

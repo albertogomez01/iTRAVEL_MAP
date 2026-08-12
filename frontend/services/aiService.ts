@@ -7,7 +7,7 @@ import { TripPlan, UserPreferences } from '../types';
 
 export const getApiKey = (): string => {
   const customKey = typeof localStorage !== 'undefined' ? localStorage.getItem('CUSTOM_GEMINI_API_KEY') : null;
-  if (customKey && customKey.trim()) {
+  if (customKey && customKey.trim() && customKey.trim().length > 10) {
     return customKey.trim();
   }
   if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) {
@@ -83,9 +83,9 @@ Reglas de Interacción y Formato Visual:
 `;
 
 const CANDIDATE_MODELS = [
-  'gemini-1.5-flash',
-  'gemini-2.0-flash-exp',
-  'gemini-1.5-pro'
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-1.5-flash'
 ];
 
 let activeModelIndex = 0;
@@ -142,13 +142,39 @@ export const initChat = (preferences: UserPreferences) => {
 };
 
 export const sendMessageToAgent = async (message: string) => {
-  if (!ai || !chatSession) throw new Error("Sesión de chat no inicializada");
-  
   const cacheKey = getCacheKey(message, lastPreferences);
   if (chatResponseCache.has(cacheKey)) {
     console.log("⚡ Respuesta de chat servida desde la caché (0 tokens GCP consumidos)");
     return chatResponseCache.get(cacheKey)!;
   }
+
+  // 1. Intentar backend oficial con Service Account (Google Cloud Vertex AI)
+  try {
+    const apiRes = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        preferences: lastPreferences
+      })
+    });
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      if (data.text) {
+        console.log("🔒 Respuesta obtenida mediante Google Cloud Service Account Backend (/api/chat)");
+        const result = {
+          text: data.text,
+          groundingChunks: data.groundingChunks || []
+        };
+        chatResponseCache.set(cacheKey, result);
+        return result;
+      }
+    }
+  } catch (backendError) {
+    console.warn("Backend Service Account API no disponible, usando fallback cliente:", backendError);
+  }
+
+  if (!ai || !chatSession) throw new Error("Sesión de chat no inicializada");
 
   for (let attempt = 0; attempt < CANDIDATE_MODELS.length; attempt++) {
     try {

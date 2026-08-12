@@ -112,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* App Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between text-white">
           <div className="flex items-center gap-2.5 group cursor-pointer">
-            <img src="/logo.png" alt="iTRAVEL_MAP Logo" className="w-8 h-8 rounded-xl object-cover shadow-lg border border-teal-500/30 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(20,184,166,0.6)] transition-all duration-300" />
+            <img src="/logo.png" alt="iTRAVEL_MAP Logo" style={{ maxWidth: '32px', maxHeight: '32px' }} className="w-8 h-8 rounded-xl object-cover shadow-lg border border-teal-500/30 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(20,184,166,0.6)] transition-all duration-300" />
             <h1 className="font-bold tracking-wide group-hover:text-brand-400 transition-colors">iTRAVEL_MAP</h1>
           </div>
           
@@ -392,24 +392,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
         <div className="p-3 border-t border-slate-800 text-[11px] text-slate-400 flex flex-col gap-1.5 items-center text-center">
-          <div className="flex items-center justify-center gap-3 font-medium text-slate-400">
+          <div className="text-[10px] font-semibold text-teal-400 bg-teal-950/60 px-2.5 py-1 rounded-full border border-teal-500/30 flex items-center gap-1">
+            <span>✨ Desarrollado con Google Gemini 3.6 Flash</span>
+          </div>
+          <div className="flex items-center justify-center gap-3 font-medium text-slate-400 mt-1">
             <button
               onClick={() => onOpenLegalModal && onOpenLegalModal('about')}
-              className="hover:text-brand-400 transition-colors cursor-pointer"
+              className="hover:text-teal-400 transition-colors cursor-pointer"
             >
               Acerca de
             </button>
             <span>•</span>
             <button
               onClick={() => onOpenLegalModal && onOpenLegalModal('privacy')}
-              className="hover:text-brand-400 transition-colors cursor-pointer"
+              className="hover:text-teal-400 transition-colors cursor-pointer"
             >
               Privacidad
             </button>
             <span>•</span>
             <button
               onClick={() => onOpenLegalModal && onOpenLegalModal('terms')}
-              className="hover:text-brand-400 transition-colors cursor-pointer"
+              className="hover:text-teal-400 transition-colors cursor-pointer"
             >
               Términos
             </button>
