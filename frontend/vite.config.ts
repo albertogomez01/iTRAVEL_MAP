@@ -26,6 +26,10 @@ export default defineConfig(({ mode }) => {
         'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY || env.API_KEY || ''),
         '__APP_BUILD_TIME__': JSON.stringify(buildTime),
       },
+      build: {
+        outDir: '../dist',
+        emptyOutDir: true,
+      },
       server: {
         proxy: {
           '/api-proxy': 'http://localhost:5000',
