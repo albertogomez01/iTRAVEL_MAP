@@ -35,8 +35,9 @@ export const initAiClient = (): GoogleGenAI => {
     throw new Error("No se ha configurado la API Key de Gemini. Añade VITE_GEMINI_API_KEY en tu .env o configura tu clave en la app.");
   }
   
-  // Si la clave empieza por AIza... o AQ... es una clave directa de Gemini API (Google AI Studio)
-  const isVertex = !apiKey.startsWith('AIza') && !apiKey.startsWith('AQ');
+  // Las claves de Google AI Studio empiezan por AIzaSy... (vertexai: false)
+  // Las claves de Vertex AI / GCP empiezan por AQ... u otras (vertexai: true)
+  const isVertex = !apiKey.startsWith('AIza');
   ai = new GoogleGenAI({ apiKey, vertexai: isVertex });
   return ai;
 };
