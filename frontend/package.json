@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/genai": "latest",
+    "@tailwindcss/postcss": "^4.3.3",
     "firebase": "^12.17.1",
     "leaflet": "latest",
     "lucide-react": "latest",
@@ -24,6 +25,9 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "latest",
+    "autoprefixer": "latest",
+    "postcss": "latest",
+    "tailwindcss": "latest",
     "typescript": "latest",
     "vite": "latest"
   }

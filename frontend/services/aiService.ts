@@ -48,7 +48,7 @@ try {
   console.warn("Inicialización inicial de GoogleGenAI pospuesta hasta que se configure la API Key.");
 }
 
-const MODEL_NAME = 'gemini-1.5-flash';
+const MODEL_NAME = 'gemini-2.0-flash';
 let chatSession: Chat | null = null;
 
 
