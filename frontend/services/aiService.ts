@@ -143,20 +143,29 @@ export const sendMessageToAgent = async (message: string) => {
       })
     });
     
-    if (apiRes.ok) {
-      const data = await apiRes.json();
-      if (data.text) {
-        console.log("🔒 Respuesta obtenida mediante Google Cloud Service Account Backend (/api/chat)");
-        const result = {
-          text: data.text,
-          groundingChunks: data.groundingChunks || []
-        };
-        chatResponseCache.set(cacheKey, result);
-        return result;
-      }
+    const data = await apiRes.json();
+    if (apiRes.ok && data.text) {
+      console.log("🔒 Respuesta obtenida mediante Google Cloud Service Account Backend (/api/chat)");
+      const result = {
+        text: data.text,
+        groundingChunks: data.groundingChunks || []
+      };
+      chatResponseCache.set(cacheKey, result);
+      return result;
+    } else {
+      const errorDetail = data.details || data.error || data.message || `HTTP ${apiRes.status}`;
+      console.error("[Backend Service Account Error]:", errorDetail);
+      return {
+        text: `⚠️ **Error en Backend Google Cloud (Vertex AI ${apiRes.status})**:\n\n\`\`\`json\n${typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail, null, 2)}\n\`\`\`\n\n*Nota: Verifica en Google Cloud IAM que la Cuenta de Servicio (${data.clientEmail || 'ais-gemini-key-012b550b3ba5463@894519712518.iam.gserviceaccount.com'}) tenga asignado el rol **Vertex AI User** (roles/aiplatform.user).*`,
+        groundingChunks: []
+      };
     }
-  } catch (backendError) {
+  } catch (backendError: any) {
     console.warn("Error conectando con Backend Service Account (/api/chat):", backendError);
+    return {
+      text: `⚠️ **Error de conexión con el Backend**: ${backendError?.message || backendError}`,
+      groundingChunks: []
+    };
   }
 
   // Fallback con cliente local si existe sesión activa

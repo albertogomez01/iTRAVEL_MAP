@@ -178,8 +178,26 @@ app.get('/api/health', (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const accessToken = await getAccessToken(res);
-    if (!accessToken) return;
+    let accessToken;
+    try {
+      const client = await auth.getClient();
+      const tokenResponse = await client.getAccessToken();
+      accessToken = tokenResponse.token;
+    } catch (authErr) {
+      console.error('[Google Cloud Auth Error]:', authErr);
+      return res.status(401).json({
+        error: 'Google Cloud Authentication Failed',
+        details: authErr.message || authErr,
+        clientEmail: serviceAccountCreds.client_email
+      });
+    }
+
+    if (!accessToken) {
+      return res.status(401).json({
+        error: 'Could not acquire OAuth2 access token for Service Account',
+        clientEmail: serviceAccountCreds.client_email
+      });
+    }
 
     const { message, preferences, history } = req.body;
     const projectId = serviceAccountCreds.project_id || GOOGLE_CLOUD_PROJECT || 'key-perigee-406513';
@@ -213,43 +231,65 @@ Recomienda itinerarios paso a paso con enlaces markdown explícitos [🏨 Hotel]
       parts: [{ text: message }]
     });
 
-    const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-1.5-flash:generateContent`;
+    const candidateModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+    let lastErrorDetails = null;
+    let lastStatusCode = 500;
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: systemInstruction }]
+    for (const modelName of candidateModels) {
+      const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${modelName}:generateContent`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
         },
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1500
-        }
-      })
-    });
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: systemInstruction }]
+          },
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1500
+          }
+        })
+      });
 
-    if (!response.ok) {
+      if (response.ok) {
+        const data = await response.json();
+        const candidate = data.candidates?.[0];
+        const text = candidate?.content?.parts?.[0]?.text || "Lo siento, no pude procesar tu solicitud.";
+
+        return res.json({
+          text,
+          groundingChunks: candidate?.groundingMetadata?.groundingChunks || [],
+          model: modelName
+        });
+      }
+
       const errBody = await response.text();
-      console.error('[Vertex AI Proxy Error]:', errBody);
-      return res.status(response.status).json({ error: 'Vertex AI backend call failed', details: errBody });
+      console.error(`[Vertex AI Proxy Error - ${modelName}]:`, errBody);
+      lastStatusCode = response.status;
+      try {
+        lastErrorDetails = JSON.parse(errBody);
+      } catch {
+        lastErrorDetails = errBody;
+      }
     }
 
-    const data = await response.json();
-    const candidate = data.candidates?.[0];
-    const text = candidate?.content?.parts?.[0]?.text || "Lo siento, no pude procesar tu solicitud.";
-
-    return res.json({
-      text,
-      groundingChunks: candidate?.groundingMetadata?.groundingChunks || []
+    return res.status(lastStatusCode).json({
+      error: 'Vertex AI backend call failed',
+      details: lastErrorDetails,
+      clientEmail: serviceAccountCreds.client_email,
+      projectId
     });
   } catch (err) {
     console.error('[POST /api/chat Error]:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({
+      error: err.message || 'Internal Server Error',
+      clientEmail: serviceAccountCreds.client_email
+    });
   }
 });
 
