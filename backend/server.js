@@ -318,8 +318,8 @@ function getRequestHeaders(accessToken) {
 // --- Proxy Endpoint ---
 app.post('/api-proxy', async (req, res) => {
 
-  // Check for the custom header added by the shim
-  if (req.headers['x-app-proxy'] !== PROXY_HEADER) {
+  // Check for the custom header added by the shim (if PROXY_HEADER is set)
+  if (PROXY_HEADER && req.headers['x-app-proxy'] !== PROXY_HEADER) {
     return res.status(403).send('Forbidden: Request must originate from the Vertex App shim.');
   }
 
