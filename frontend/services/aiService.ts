@@ -104,41 +104,25 @@ const getCacheKey = (prompt: string, prefs?: UserPreferences | null): string => 
 };
 
 export const initChat = (preferences: UserPreferences) => {
-  if (!ai) {
-    try {
-      ai = initAiClient();
-    } catch (e) {
-      throw new Error("No se ha configurado la API Key de Gemini. Añade VITE_GEMINI_API_KEY en tu entorno o en la aplicación.");
-    }
-  }
-
   lastPreferences = preferences;
-  const originStr = preferences.originLocation ? `\n  - Localidad de Origen: ${preferences.originLocation}` : '';
-  const datesStr = preferences.startDate && preferences.endDate 
-    ? `\n  - Fechas del viaje: Del ${preferences.startDate} al ${preferences.endDate}` 
-    : '';
-  const passengersStr = `\n  - Número de Viajeros / Personas: ${preferences.passengers || 1}`;
-  const tripTypeStr = preferences.tripType ? `\n  - Tipo de Viaje: ${preferences.tripType === 'RoundTrip' ? 'Ida y Vuelta' : 'Solo Ida'}` : '';
-
-  const totalBudget = (preferences.maxBudget) * (preferences.passengers || 1);
-  const prefString = `Preferencias del Usuario: ${originStr}${tripTypeStr}${passengersStr}
-  - Prefiere Trenes/Autobuses Nocturnos en lugar de Hoteles: ${preferences.preferNightTrains ? 'Sí' : 'No'}
-  - Estilo de Alojamiento: ${preferences.budgetLevel}
-  - Presupuesto Máximo POR PERSONA: ${preferences.maxBudget}€/persona (Presupuesto Total Grupo para ${preferences.passengers || 1} personas: ${totalBudget}€)
-  - Ritmo de Viaje: ${preferences.pace}${datesStr}`;
-
-  const currentModel = CANDIDATE_MODELS[activeModelIndex] || CANDIDATE_MODELS[0];
-  console.log(`Inicializando chat con modelo económico: ${currentModel}`);
-
-  chatSession = ai.chats.create({
-    model: currentModel,
-    config: {
-      systemInstruction: `${SYSTEM_INSTRUCTION}\n\n${prefString}`,
-      tools: [{ googleSearch: {} }], // Búsqueda en vivo activada
-      temperature: 0.7,
-      maxOutputTokens: 1500,
-    },
-  });
+  try {
+    if (!ai) {
+      ai = initAiClient();
+    }
+    if (ai) {
+      const currentModel = CANDIDATE_MODELS[activeModelIndex] || CANDIDATE_MODELS[0];
+      chatSession = ai.chats.create({
+        model: currentModel,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          temperature: 0.7,
+          maxOutputTokens: 1500,
+        },
+      });
+    }
+  } catch (e) {
+    console.log("Chat configurado para usar Backend Service Account (/api/chat)");
+  }
 };
 
 export const sendMessageToAgent = async (message: string) => {

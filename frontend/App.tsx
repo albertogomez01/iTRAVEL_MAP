@@ -206,14 +206,15 @@ export default function App() {
           }]);
         }
       } catch (error: any) {
-        console.error("Error de inicialización:", error);
-        setIsApiKeyModalOpen(true);
-        setMessages([{
-          id: 'error',
-          role: 'model',
-          text: `⚠️ **Configuración de Gemini API Key requerida**\n\nNo se ha detectado una API Key válida. Haz clic en el botón a continuación para ingresar tu clave gratuita de Google AI Studio.`,
-          isError: true
-        }]);
+        console.warn("Inicialización mediante backend Service Account activada:", error);
+        setIsInitialized(true);
+        if (messages.length === 0) {
+          setMessages([{
+            id: 'welcome',
+            role: 'model',
+            text: "¡Hola! Soy tu Copiloto iTRAVEL_MAP. ¿Desde dónde empezarás tu viaje y a dónde te gustaría ir? Abre el menú ☰ arriba a la izquierda para ajustar origen, destino y presupuesto, o escríbeme directamente por aquí."
+          }]);
+        }
       }
     };
 
