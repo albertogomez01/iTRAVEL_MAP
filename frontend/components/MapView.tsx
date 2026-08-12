@@ -4,6 +4,8 @@ import L from 'leaflet';
 import { ItineraryOption, MapTarget } from '../types';
 import { Loader2, Navigation, Compass, Layers, Bed, Landmark, Coffee, Camera, Eye, EyeOff, MessageSquarePlus, ZoomIn, ZoomOut, Search, Maximize2, MapPin, ChevronDown, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
 import { getRealisticRoute } from '../services/routeService';
+import { LayerSelector } from './LayerSelector';
+import { GlassPopup } from './GlassPopup';
 
 // Cached custom icons to avoid rebuilding Leaflet DOM instances on every re-render
 const iconCache = new Map<string, L.DivIcon>();
@@ -202,6 +204,7 @@ export const MapView: React.FC<MapViewProps> = ({
 }) => {
   const [isMapReady, setIsMapReady] = useState(false);
   const [isTilesLoading, setIsTilesLoading] = useState(true);
+  const [currentLayer, setCurrentLayer] = useState<'standard' | 'satellite' | 'terrain'>('standard');
 
   // Layer visibility toggles
   const [showMainRoutes, setShowMainRoutes] = useState(true);
@@ -379,6 +382,14 @@ export const MapView: React.FC<MapViewProps> = ({
     };
   }).filter(p => p.positions.length >= 2);
 
+  const getTileUrl = (layer: string) => {
+    switch (layer) {
+      case 'satellite': return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+      case 'terrain': return 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+      default: return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    }
+  };
+
   return (
     <div className="relative h-full w-full bg-slate-950 overflow-hidden">
       {/* Map Tile & Route Loading Indicator */}
@@ -475,7 +486,7 @@ export const MapView: React.FC<MapViewProps> = ({
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          url={getTileUrl(currentLayer)}
           keepBuffer={3}
           updateWhenZooming={false}
           eventHandlers={{
@@ -558,7 +569,7 @@ export const MapView: React.FC<MapViewProps> = ({
             icon={getDayIcon(day.dayNumber)}
           >
             <Popup className="rounded-2xl">
-              <div className="font-sans p-1">
+              <GlassPopup>
                 <strong className="text-slate-900 text-sm font-bold block mb-1">Día {day.dayNumber}: {day.location}</strong>
                 {day.theme && <span className="text-xs text-slate-500 block mb-2">{day.theme}</span>}
                 
@@ -579,7 +590,7 @@ export const MapView: React.FC<MapViewProps> = ({
                     <span>Llegada en {day.transport[0].mode}</span>
                   </div>
                 )}
-              </div>
+              </GlassPopup>
             </Popup>
           </Marker>
         ))}
@@ -595,7 +606,7 @@ export const MapView: React.FC<MapViewProps> = ({
               icon={getHotelIcon(acc.name)}
             >
               <Popup className="rounded-2xl">
-                <div className="font-sans p-1 max-w-xs">
+                <GlassPopup>
                   <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-0.5 flex items-center gap-1">
                     <Bed size={12} /> Hotel Recomendado (Día {day.dayNumber})
                   </div>
@@ -621,7 +632,7 @@ export const MapView: React.FC<MapViewProps> = ({
                       </button>
                     )}
                   </div>
-                </div>
+                </GlassPopup>
               </Popup>
             </Marker>
           );
@@ -638,7 +649,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 icon={getPoiIcon(poi.name, poi.category)}
               >
                 <Popup className="rounded-2xl">
-                  <div className="font-sans p-1 max-w-xs">
+                  <GlassPopup>
                     <div className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-0.5 flex items-center gap-1">
                       <span>{getPoiEmoji(poi.category)}</span>
                       <span>{poi.category} • Día {day.dayNumber}</span>
@@ -669,6 +680,7 @@ export const MapView: React.FC<MapViewProps> = ({
                       )}
                     </div>
                   </div>
+                </GlassPopup>
                 </Popup>
               </Marker>
             );

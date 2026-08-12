@@ -1,10 +1,14 @@
 module.exports = {
+  darkMode: 'class',
   content: [
     './index.html',
-    './**/*.{js,ts,jsx,tsx,html}'
+    './src/**/*.{js,ts,jsx,tsx,html}'
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
       colors: {
         brand: {
           50: '#f0fdfa',

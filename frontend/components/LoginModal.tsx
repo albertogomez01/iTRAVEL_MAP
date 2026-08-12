@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Compass, Sparkles, User, Mail, ShieldCheck, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { loginWithGoogle, isFirebaseConfigured } from '../services/firebase';
+import { ModalBase } from './ModalBase';
 
 interface LoginModalProps {
   onLoginSuccess: (userData: { displayName: string; email: string; photoURL?: string }) => void;
@@ -61,7 +62,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isOpen }
       <div className="absolute bottom-1/4 right-1/3 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
 
       {/* Main Login Card */}
-      <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-8 shadow-2xl text-white overflow-y-auto max-h-[92vh] z-10">
+      <div className="relative w-full max-w-md bg-slate-800/60 backdrop-blur-lg border border-slate-800 rounded-3xl p-5 sm:p-8 shadow-2xl text-white overflow-y-auto max-h-[92vh] z-10 glass-modal">
         
         {/* Top Header Badge */}
         <div className="flex flex-col items-center text-center mb-6">

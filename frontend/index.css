@@ -1,0 +1,23 @@
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Glassmorphism utility */
+.glass-modal {
+  @apply bg-white/30 backdrop-blur-md border border-white/20 rounded-xl shadow-lg;
+}
+
+/* Neon route styling */
+.neon-route {
+  @apply stroke-current drop-shadow-[0_0_6px_currentColor];
+}
+
+/* Fade-in animation for UI elements */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
