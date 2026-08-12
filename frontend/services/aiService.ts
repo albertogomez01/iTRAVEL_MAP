@@ -5,15 +5,21 @@ import { TripPlan, UserPreferences } from '../types';
 // 1. STANDARD GEMINI API
 // ============================================================================
 
-// Helper para obtener la API key en Vite, Vercel o proceso local
 export const getApiKey = (): string => {
+  const customKey = typeof localStorage !== 'undefined' ? localStorage.getItem('CUSTOM_GEMINI_API_KEY') : null;
+  if (customKey && customKey.trim()) {
+    return customKey.trim();
+  }
   if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) {
-    return import.meta.env.VITE_GEMINI_API_KEY;
+    const envKey = import.meta.env.VITE_GEMINI_API_KEY.trim();
+    if (envKey && envKey.length > 10) {
+      return envKey;
+    }
   }
   if (typeof process !== 'undefined' && process.env?.API_KEY && process.env.API_KEY !== 'api-key-this-is-not-used-can-be-ignored!') {
-    return process.env.API_KEY;
+    return process.env.API_KEY.trim();
   }
-  return localStorage.getItem('CUSTOM_GEMINI_API_KEY') || '';
+  return '';
 };
 
 export const setCustomApiKey = (key: string) => {

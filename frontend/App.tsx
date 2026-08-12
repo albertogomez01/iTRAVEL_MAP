@@ -11,6 +11,7 @@ import { OnboardingGuideModal } from './components/OnboardingGuideModal';
 import { LegalModal, LegalTab } from './components/LegalModal';
 import { AppSplashScreen } from './components/AppSplashScreen';
 import { UpdateNotifier } from './components/UpdateNotifier';
+import { ApiKeyModal } from './components/ApiKeyModal';
 
 import { User } from 'firebase/auth';
 import { 
@@ -48,6 +49,7 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(!activeUser);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalTab>('about');
   const [userId] = useState(() => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
 
@@ -205,10 +207,11 @@ export default function App() {
         }
       } catch (error: any) {
         console.error("Error de inicialización:", error);
+        setIsApiKeyModalOpen(true);
         setMessages([{
           id: 'error',
           role: 'model',
-          text: `⚠️ **Configuración local necesaria**\n\n${error.message}`,
+          text: `⚠️ **Configuración de Gemini API Key requerida**\n\nNo se ha detectado una API Key válida. Haz clic en el botón a continuación para ingresar tu clave gratuita de Google AI Studio.`,
           isError: true
         }]);
       }
@@ -264,10 +267,11 @@ export default function App() {
       }
     } catch (error: any) {
       console.error("Error en el chat:", error);
+      setIsApiKeyModalOpen(true);
       setMessages(prev => [...prev, { 
         id: Date.now().toString(), 
         role: 'model', 
-        text: `Error: ${error?.message || 'Algo salió mal. Comprueba tu clave API.'}`, 
+        text: `⚠️ **Error de clave Gemini API**: ${error?.message || 'Por favor, comprueba tu API Key en la ventana emergente.'}`, 
         isError: true 
       }]);
     } finally {
@@ -807,6 +811,13 @@ export default function App() {
       {showSplash && (
         <AppSplashScreen onFinish={() => setShowSplash(false)} />
       )}
+
+      {/* 12. GEMINI API KEY SETUP MODAL */}
+      <ApiKeyModal 
+        isOpen={isApiKeyModalOpen} 
+        onClose={() => setIsApiKeyModalOpen(false)} 
+        onSuccess={() => setIsInitialized(false)} 
+      />
 
     </div>
   );
