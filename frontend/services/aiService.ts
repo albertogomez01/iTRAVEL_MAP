@@ -132,7 +132,7 @@ export const sendMessageToAgent = async (message: string) => {
     return chatResponseCache.get(cacheKey)!;
   }
 
-  // 1. Intentar backend oficial con Service Account (Google Cloud Vertex AI)
+  // 1. Backend oficial con Service Account (Google Cloud Vertex AI)
   try {
     const apiRes = await fetch('/api/chat', {
       method: 'POST',
@@ -142,6 +142,7 @@ export const sendMessageToAgent = async (message: string) => {
         preferences: lastPreferences
       })
     });
+    
     if (apiRes.ok) {
       const data = await apiRes.json();
       if (data.text) {
@@ -155,52 +156,31 @@ export const sendMessageToAgent = async (message: string) => {
       }
     }
   } catch (backendError) {
-    console.warn("Backend Service Account API no disponible, usando fallback cliente:", backendError);
+    console.warn("Error conectando con Backend Service Account (/api/chat):", backendError);
   }
 
-  if (!ai || !chatSession) throw new Error("Sesión de chat no inicializada");
-
-  for (let attempt = 0; attempt < CANDIDATE_MODELS.length; attempt++) {
+  // Fallback con cliente local si existe sesión activa
+  if (ai && chatSession) {
     try {
       const response = await chatSession.sendMessage({ message });
       const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-      
       const result = {
         text: response.text,
         groundingChunks: groundingChunks.map((chunk: any) => ({
           web: chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : undefined
         })).filter((c: any) => c.web !== undefined)
       };
-
       chatResponseCache.set(cacheKey, result);
       return result;
-    } catch (error: any) {
-      const errMsg = String(error?.message || error);
-      console.warn(`Error con modelo ${CANDIDATE_MODELS[activeModelIndex]} (${errMsg}). Probando siguiente modelo...`);
-      
-      activeModelIndex = (activeModelIndex + 1) % CANDIDATE_MODELS.length;
-      if (lastPreferences) {
-        initChat(lastPreferences);
-      } else {
-        chatSession = ai.chats.create({
-          model: CANDIDATE_MODELS[activeModelIndex],
-          config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
-            tools: [{ googleSearch: {} }],
-            temperature: 0.7,
-            maxOutputTokens: 1500,
-          },
-        });
-      }
-      
-      // If we cycled through all models, throw the last error
-      if (attempt === CANDIDATE_MODELS.length - 1) {
-        throw error;
-      }
+    } catch (e: any) {
+      console.warn("Fallback cliente no disponible:", e);
     }
   }
 
-  throw new Error("No se pudo obtener respuesta de ningún modelo de Gemini disponible.");
+  return {
+    text: "Lo siento, ha ocurrido un problema al procesar tu solicitud con el Copiloto. Por favor, inténtalo de nuevo.",
+    groundingChunks: []
+  };
 };
 
 // Schema for the Orchestrator to extract structured data

@@ -449,41 +449,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
-        {/* Modal Key Settings */}
-        {showKeyModal && (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl text-white">
-              <h3 className="text-base font-bold mb-2 flex items-center gap-2">
-                <Settings className="text-brand-400" size={18} /> Configuración de Gemini API Key
-              </h3>
-              <p className="text-xs text-slate-300 mb-4">
-                Puedes introducir tu clave personal de Google Gemini aquí:
-              </p>
-              <input
-                type="password"
-                placeholder="Tu API Key (AQ... o AIzaSy...)"
-                value={customKeyInput}
-                onChange={(e) => setCustomKeyInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs mb-4 focus:outline-none focus:border-brand-500 text-white placeholder-slate-500"
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setShowKeyModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-300"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSaveApiKey}
-                  className="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-xl text-xs font-semibold text-white shadow"
-                >
-                  Guardar Clave
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
     </>
   );
