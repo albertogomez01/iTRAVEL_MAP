@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -19,6 +20,18 @@ const versionPlugin = (timestamp: number): Plugin => ({
   }
 });
 
+const copyToRootDistPlugin = (): Plugin => ({
+  name: 'copy-to-root-dist',
+  closeBundle() {
+    const srcDir = path.resolve(__dirname, 'dist');
+    const destDir = path.resolve(__dirname, '../dist');
+    if (fs.existsSync(srcDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+      fs.cpSync(srcDir, destDir, { recursive: true });
+    }
+  }
+});
+
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
     return {
@@ -27,7 +40,7 @@ export default defineConfig(({ mode }) => {
         '__APP_BUILD_TIME__': JSON.stringify(buildTime),
       },
       build: {
-        outDir: '../dist',
+        outDir: 'dist',
         emptyOutDir: true,
       },
       server: {
@@ -36,7 +49,7 @@ export default defineConfig(({ mode }) => {
           '/ws-proxy': {target: 'ws://localhost:5000', ws: true},
         },
       },
-      plugins: [react(), versionPlugin(buildTime)],
+      plugins: [react(), versionPlugin(buildTime), copyToRootDistPlugin()],
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
