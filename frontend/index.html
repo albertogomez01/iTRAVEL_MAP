@@ -31,34 +31,75 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6350264370547424" crossorigin="anonymous"></script>
     
 
+    <!-- Tailwind CSS CDN Fallback & Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            900: '#134e4a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
+        }
+
         /* Custom scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0d9488; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Glassmorphism Utilities */
-        .glass-modal {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        
         /* Markdown styles */
         .prose p { margin-bottom: 0.75em; }
         .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.75em; }
-        .prose strong { font-weight: 600; color: #1e293b; }
-        .prose a { color: #0d9488; text-decoration: underline; }
+        .prose strong { font-weight: 600; color: #f8fafc; }
+        .prose a { color: #2dd4bf; text-decoration: underline; }
 
         /* Leaflet overrides */
-        .leaflet-container { z-index: 0 !important; }
+        .leaflet-container { z-index: 0 !important; font-family: inherit !important; }
+        .leaflet-popup-content-wrapper {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border-radius: 1rem !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2) !important;
+            padding: 4px !important;
+        }
+        .leaflet-popup-tip {
+            background: #ffffff !important;
+        }
+        .leaflet-popup-close-button {
+            color: #64748b !important;
+            padding: 8px 10px !important;
+        }
+        .leaflet-popup-close-button:hover {
+            color: #0f172a !important;
+        }
 
         /* Animations */
         .animated-route {
@@ -81,7 +122,7 @@
         @keyframes orbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 h-screen overflow-hidden flex flex-col">
+<body class="bg-slate-950 text-slate-100 h-screen overflow-hidden flex flex-col">
     <div id="root" class="h-full flex flex-col"></div>
     <script type="module" src="./index.tsx"></script>
 </body>
