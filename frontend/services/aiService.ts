@@ -125,71 +125,62 @@ export const initChat = (preferences: UserPreferences) => {
   }
 };
 
-export const sendMessageToAgent = async (message: string) => {
-  const cacheKey = getCacheKey(message, lastPreferences);
-  if (chatResponseCache.has(cacheKey)) {
-    console.log("⚡ Respuesta de chat servida desde la caché (0 tokens GCP consumidos)");
-    return chatResponseCache.get(cacheKey)!;
-  }
+export const sendMessageToAgent = async (message: string, overridePreferences?: UserPreferences | null) => {
+  const preferences = overridePreferences || lastPreferences;
 
-  // 1. Backend oficial con Service Account (Google Cloud Vertex AI)
   try {
-    const apiRes = await fetch('/api/chat', {
+    const apiRes = await fetch('https://alb001.app.n8n.cloud/webhook/itravel-map-copilot', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
-        message,
-        preferences: lastPreferences
+        message: message,
+        travelPreferences: preferences
       })
     });
-    
-    const data = await apiRes.json();
-    if (apiRes.ok && data.text) {
-      console.log("🔒 Respuesta obtenida mediante Google Cloud Service Account Backend (/api/chat)");
-      const result = {
-        text: data.text,
-        groundingChunks: data.groundingChunks || []
-      };
-      chatResponseCache.set(cacheKey, result);
-      return result;
-    } else {
-      const errorDetail = data.details || data.error || data.message || `HTTP ${apiRes.status}`;
-      console.error("[Backend Service Account Error]:", errorDetail);
+
+    if (!apiRes.ok) {
+      const errorText = await apiRes.text();
+      console.error(`[n8n Webhook Error ${apiRes.status}]:`, errorText);
       return {
-        text: `⚠️ **Error en Backend Google Cloud (Vertex AI ${apiRes.status})**:\n\n\`\`\`json\n${typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail, null, 2)}\n\`\`\`\n\n*Nota: Verifica en Google Cloud IAM que la Cuenta de Servicio (${data.clientEmail || 'ais-gemini-key-012b550b3ba5463@894519712518.iam.gserviceaccount.com'}) tenga asignado el rol **Vertex AI User** (roles/aiplatform.user).*`,
+        text: `⚠️ **Error en n8n Webhook (HTTP ${apiRes.status})**: ${apiRes.statusText}`,
         groundingChunks: []
       };
     }
-  } catch (backendError: any) {
-    console.warn("Error conectando con Backend Service Account (/api/chat):", backendError);
+
+    const data = await apiRes.json();
+    
+    // Lee la propiedad "response" (o "output") devuelta por n8n
+    let responseText = '';
+    if (typeof data === 'string') {
+      responseText = data;
+    } else if (Array.isArray(data) && data.length > 0) {
+      const item = data[0];
+      if (typeof item === 'string') {
+        responseText = item;
+      } else if (item && typeof item === 'object') {
+        responseText = item.response || item.output || item.message || item.text || JSON.stringify(item);
+      }
+    } else if (data && typeof data === 'object') {
+      responseText = data.response || data.output || data.message || data.text || JSON.stringify(data);
+    }
+
+    if (!responseText) {
+      responseText = "No se ha recibido una respuesta del agente de n8n.";
+    }
+
     return {
-      text: `⚠️ **Error de conexión con el Backend**: ${backendError?.message || backendError}`,
+      text: responseText,
+      groundingChunks: []
+    };
+  } catch (error: any) {
+    console.error("Error conectando con el Webhook de n8n:", error);
+    return {
+      text: `⚠️ **Error de conexión con n8n**: ${error?.message || error}`,
       groundingChunks: []
     };
   }
-
-  // Fallback con cliente local si existe sesión activa
-  if (ai && chatSession) {
-    try {
-      const response = await chatSession.sendMessage({ message });
-      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-      const result = {
-        text: response.text,
-        groundingChunks: groundingChunks.map((chunk: any) => ({
-          web: chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : undefined
-        })).filter((c: any) => c.web !== undefined)
-      };
-      chatResponseCache.set(cacheKey, result);
-      return result;
-    } catch (e: any) {
-      console.warn("Fallback cliente no disponible:", e);
-    }
-  }
-
-  return {
-    text: "Lo siento, ha ocurrido un problema al procesar tu solicitud con el Copiloto. Por favor, inténtalo de nuevo.",
-    groundingChunks: []
-  };
 };
 
 // Schema for the Orchestrator to extract structured data
