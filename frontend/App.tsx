@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Loader2, Link as LinkIcon, Menu, MessageSquare, Map as MapIcon, Calendar, ChevronDown, Bookmark, Sparkles, X, Share2, Check } from 'lucide-react';
 import { Message, TripPlan, UserPreferences, MapTarget } from './types';
-import { initChat, sendMessageToAgent, extractItineraryState, isAdkConfigured, initAdkSession, streamAdkQuery } from './services/aiService';
+import { initChat, sendMessageToAgent, extractItineraryState, enrichTripPlanCoordinatesAsync, isAdkConfigured, initAdkSession, streamAdkQuery } from './services/aiService';
 import { ChatMessage } from './components/ChatMessage';
 import { ItineraryView } from './components/ItineraryView';
 import { Sidebar, SavedTrip } from './components/Sidebar';
@@ -262,7 +262,16 @@ export default function App() {
         };
         
         setMessages(prev => [...prev, modelMsg]);
-        updateItineraryState([...messages, userMsg, modelMsg]);
+
+        if (response.tripPlan) {
+          const enriched = await enrichTripPlanCoordinatesAsync(response.tripPlan, preferences);
+          setTripPlan(enriched);
+          if (enriched.options && enriched.options.length > 0) {
+            setSelectedOptionId(enriched.options[0].id);
+          }
+        } else {
+          updateItineraryState([...messages, userMsg, modelMsg]);
+        }
       }
     } catch (error: any) {
       console.error("Error en el chat:", error);

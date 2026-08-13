@@ -195,8 +195,11 @@ export const sendMessageToAgent = async (message: string, overridePreferences?: 
       responseText = "El servicio no devolvió una respuesta válida.";
     }
 
+    const returnedTripPlan = data.tripPlan || data.itinerary || (data.options ? { origin: preferences?.originLocation || 'Por definir', options: data.options } : undefined);
+
     return {
       text: responseText,
+      tripPlan: returnedTripPlan,
       groundingChunks: []
     };
   } catch (error: any) {
