@@ -190,16 +190,53 @@ export const sendMessageToAgent = async (message: string, overridePreferences?: 
       responseText = data.response || data.output || '';
     }
 
+    // A) Extraer array de ciudades si viene en data.cities o data[0].cities
+    let extractedCities: string[] = [];
+    if (Array.isArray(data?.cities)) {
+      extractedCities = data.cities;
+    } else if (Array.isArray(data) && Array.isArray(data[0]?.cities)) {
+      extractedCities = data[0].cities;
+    }
+
+    // B) Buscar si el bloque JSON {"cities": [...]} está al final o dentro del texto de respuesta
+    if (extractedCities.length === 0 && typeof responseText === 'string') {
+      const citiesJsonRegex = /(?:```(?:json)?\s*)?\{\s*"cities"\s*:\s*\[([\s\S]*?)\]\s*\}(?:\s*```)?/i;
+      const match = responseText.match(citiesJsonRegex);
+      if (match) {
+        try {
+          const jsonStr = match[0].replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+          const parsed = JSON.parse(jsonStr);
+          if (Array.isArray(parsed?.cities)) {
+            extractedCities = parsed.cities;
+          }
+        } catch (e) {
+          console.warn("No se pudo parsear el bloque de ciudades del texto:", e);
+        }
+      }
+    }
+
+    // C) LIMPIAR el texto para que NO muestre el bloque {"cities": [...]} al usuario en el chat
+    if (typeof responseText === 'string') {
+      responseText = responseText
+        .replace(/(?:```(?:json)?\s*)?\{\s*"cities"\s*:\s*\[[\s\S]*?\]\s*\}(?:\s*```)?/gi, '')
+        .trim();
+    }
+
     // Si el JSON devuelto no tiene la propiedad response ni output, mostrar mensaje amigable
     if (!responseText || typeof responseText !== 'string' || !responseText.trim()) {
       responseText = "El servicio no devolvió una respuesta válida.";
     }
 
-    const returnedTripPlan = data.tripPlan || data.itinerary || (data.options ? { origin: preferences?.originLocation || 'Por definir', options: data.options } : undefined);
+    let returnedTripPlan = data.tripPlan || data.itinerary || (data.options ? { origin: preferences?.originLocation || 'Por definir', options: data.options } : undefined);
+
+    if (!returnedTripPlan && extractedCities.length > 0) {
+      returnedTripPlan = await createTripPlanFromCitiesAsync(extractedCities, preferences);
+    }
 
     return {
       text: responseText,
       tripPlan: returnedTripPlan,
+      cities: extractedCities,
       groundingChunks: []
     };
   } catch (error: any) {
@@ -611,6 +648,126 @@ export const enrichTripPlanCoordinatesAsync = async (plan: TripPlan, preferences
     ...plan,
     originCoordinates: originCoords,
     options: enrichedOptions
+  };
+};
+
+export const createTripPlanFromCitiesAsync = async (
+  cities: string[], 
+  preferences?: UserPreferences | null
+): Promise<TripPlan | null> => {
+  if (!cities || !Array.isArray(cities) || cities.length === 0) return null;
+
+  const validCities = cities.filter(c => typeof c === 'string' && c.trim().length > 0);
+  if (validCities.length === 0) return null;
+
+  const originName = preferences?.originLocation || validCities[0];
+  const originCoords = (await getCityCoordinatesAsync(originName)) || { lat: 40.4168, lng: -3.7038 };
+
+  const cityCoordsList = await Promise.all(
+    validCities.map(async (city) => {
+      const coords = await getCityCoordinatesAsync(city);
+      return {
+        name: city,
+        coords: coords || { lat: 48.8566, lng: 2.3522 }
+      };
+    })
+  );
+
+  const days: any[] = cityCoordsList.map((item, index) => {
+    const prevLoc = index === 0 ? originName : cityCoordsList[index - 1].name;
+    const isSameAsPrev = prevLoc.toLowerCase().trim() === item.name.toLowerCase().trim();
+    const transportMode = index === 0 && isSameAsPrev ? 'Walk' : (index % 2 === 0 ? 'Train' : 'Flight');
+    
+    return {
+      dayNumber: index + 1,
+      location: item.name,
+      coordinates: item.coords,
+      theme: `Visita y exploración de ${item.name}`,
+      transport: isSameAsPrev ? [] : [{
+        mode: transportMode,
+        provider: transportMode === 'Train' ? 'Renfe / Eurostar' : transportMode === 'Flight' ? 'Vuelo directo' : 'FlixBus',
+        from: prevLoc,
+        to: item.name,
+        duration: 'Trayecto recomendado',
+        requiresReservation: true,
+        notes: `Trayecto entre ${prevLoc} y ${item.name}`
+      }],
+      accommodation: {
+        type: 'Hotel',
+        name: `Hotel recomendado en ${item.name}`,
+        location: item.name,
+        notes: `Ubicación recomendada en ${item.name}`,
+        coordinates: {
+          lat: Number((item.coords.lat + 0.004).toFixed(5)),
+          lng: Number((item.coords.lng + 0.004).toFixed(5))
+        }
+      },
+      pois: [
+        {
+          name: `Centro histórico de ${item.name}`,
+          category: 'Monument',
+          description: `Punto de interés principal en ${item.name}`,
+          tips: `Recomendado visitar durante la estancia`,
+          coordinates: {
+            lat: Number((item.coords.lat + 0.003).toFixed(5)),
+            lng: Number((item.coords.lng + 0.003).toFixed(5))
+          }
+        }
+      ]
+    };
+  });
+
+  const mainTitle = `Ruta por ${validCities.slice(0, 3).join(', ')}${validCities.length > 3 ? '...' : ''}`;
+  const totalDays = validCities.length;
+  const budgetPerPerson = preferences?.maxBudget ? `${preferences.maxBudget}€ / persona` : '450€ / persona';
+
+  const option1 = {
+    id: 'opt_cities_1',
+    title: `${mainTitle} (Opción Equilibrada)`,
+    summary: `Ruta de ${totalDays} días visitando ${validCities.join(' → ')}.`,
+    totalDuration: `${totalDays} días`,
+    estimatedBudget: budgetPerPerson,
+    bookingLinks: [
+      { name: 'Booking.com', url: `https://www.booking.com/searchresults.es.html?ss=${encodeURIComponent(validCities[0])}`, type: 'Accommodation' },
+      { name: 'Omio Transportes', url: 'https://www.omio.es', type: 'Transport' }
+    ],
+    days: days
+  };
+
+  const option2 = {
+    id: 'opt_cities_2',
+    title: `${mainTitle} (Opción Económica)`,
+    summary: `Versión económica en autobús FlixBus y alojamientos asequibles.`,
+    totalDuration: `${totalDays} días`,
+    estimatedBudget: `${Math.round((preferences?.maxBudget || 450) * 0.75)}€ / persona`,
+    bookingLinks: [
+      { name: 'FlixBus', url: 'https://www.flixbus.es', type: 'Transport' }
+    ],
+    days: days.map(d => ({
+      ...d,
+      transport: d.transport.map((t: any) => ({ ...t, mode: 'Bus', provider: 'FlixBus' }))
+    }))
+  };
+
+  const option3 = {
+    id: 'opt_cities_3',
+    title: `${mainTitle} (Opción Rápida / Premium)`,
+    summary: `Conexiones directas de alta velocidad y confort.`,
+    totalDuration: `${totalDays} días`,
+    estimatedBudget: `${Math.round((preferences?.maxBudget || 450) * 1.3)}€ / persona`,
+    bookingLinks: [
+      { name: 'Skyscanner', url: 'https://www.skyscanner.es', type: 'Transport' }
+    ],
+    days: days.map(d => ({
+      ...d,
+      transport: d.transport.map((t: any) => ({ ...t, mode: 'Flight', provider: 'Vuelo directo' }))
+    }))
+  };
+
+  return {
+    origin: originName,
+    originCoordinates: originCoords,
+    options: [option1, option2, option3]
   };
 };
 
