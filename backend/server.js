@@ -6,7 +6,6 @@
  */
 import 'dotenv/config';
 import express from 'express';
-import { GoogleAuth } from 'google-auth-library';
 import fetch from 'node-fetch';
 import rateLimit from 'express-rate-limit';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -17,11 +16,6 @@ app.use(express.json({limit: process?.env?.API_PAYLOAD_MAX_SIZE || "7mb"}));
 const PORT = process?.env?.API_BACKEND_PORT || 5000;
 const API_BACKEND_HOST = process?.env?.API_BACKEND_HOST || "127.0.0.1";
 
-const GOOGLE_CLOUD_LOCATION = process?.env?.GOOGLE_CLOUD_LOCATION;
-const GOOGLE_CLOUD_PROJECT = process?.env?.GOOGLE_CLOUD_PROJECT;
-if (!GOOGLE_CLOUD_PROJECT || !GOOGLE_CLOUD_LOCATION) {
-  console.warn("Warning: Environment variables GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION are not set.");
-}
 const PROXY_HEADER = process?.env?.PROXY_HEADER;
 if (!PROXY_HEADER) {
   console.warn("Warning: Environment variable PROXY_HEADER is not set.");
