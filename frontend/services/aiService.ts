@@ -140,6 +140,7 @@ export const sendMessageToAgent = async (message: string, overridePreferences?: 
       })
     });
 
+    // 1. Verificar primero que la respuesta del fetch sea OK (apiRes.ok)
     if (!apiRes.ok) {
       const errorText = await apiRes.text();
       console.error(`[n8n Webhook Error ${apiRes.status}]:`, errorText);
@@ -149,9 +150,32 @@ export const sendMessageToAgent = async (message: string, overridePreferences?: 
       };
     }
 
-    const data = await apiRes.json();
-    
-    // Lee la propiedad "response" (o "output") devuelta por n8n
+    // 2. Leer texto plano antes de JSON.parse() para evitar "Unexpected end of JSON input" si viene vacío
+    const rawText = await apiRes.text();
+    if (!rawText || !rawText.trim()) {
+      return {
+        text: "El servicio no devolvió una respuesta válida.",
+        groundingChunks: []
+      };
+    }
+
+    let data: any;
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseErr) {
+      if (typeof rawText === 'string' && rawText.trim().length > 0) {
+        return {
+          text: rawText.trim(),
+          groundingChunks: []
+        };
+      }
+      return {
+        text: "El servicio no devolvió una respuesta válida.",
+        groundingChunks: []
+      };
+    }
+
+    // 3. Extraer la propiedad "response" o "output"
     let responseText = '';
     if (typeof data === 'string') {
       responseText = data;
@@ -160,14 +184,15 @@ export const sendMessageToAgent = async (message: string, overridePreferences?: 
       if (typeof item === 'string') {
         responseText = item;
       } else if (item && typeof item === 'object') {
-        responseText = item.response || item.output || item.message || item.text || JSON.stringify(item);
+        responseText = item.response || item.output || '';
       }
     } else if (data && typeof data === 'object') {
-      responseText = data.response || data.output || data.message || data.text || JSON.stringify(data);
+      responseText = data.response || data.output || '';
     }
 
-    if (!responseText) {
-      responseText = "No se ha recibido una respuesta del agente de n8n.";
+    // Si el JSON devuelto no tiene la propiedad response ni output, mostrar mensaje amigable
+    if (!responseText || typeof responseText !== 'string' || !responseText.trim()) {
+      responseText = "El servicio no devolvió una respuesta válida.";
     }
 
     return {
