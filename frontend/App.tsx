@@ -1001,6 +1001,8 @@ export default function App() {
         <AppSplashScreen onFinish={() => setShowSplash(false)} />
       )}
 
+      <UpdateNotifier />
+
     </div>
   );
-}
+};

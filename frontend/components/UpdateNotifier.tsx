@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { RefreshCw, Sparkles, X } from 'lucide-react';
+import { RefreshCw, Sparkles } from 'lucide-react';
 
 export const UpdateNotifier: React.FC = () => {
-  const [hasUpdate, setHasUpdate] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [isReloading, setIsReloading] = useState(false);
 
   useEffect(() => {
     const currentBuildTime = typeof __APP_BUILD_TIME__ !== 'undefined' ? __APP_BUILD_TIME__ : 0;
@@ -15,71 +14,56 @@ export const UpdateNotifier: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           if (data && data.buildTime && Number(data.buildTime) > Number(currentBuildTime)) {
-            setHasUpdate(true);
+            setIsReloading(true);
+            // Automatic seamless reload after brief toast notification
+            setTimeout(() => {
+              window.location.reload();
+            }, 1200);
           }
         }
       } catch (e) {
-        // Ignorar errores de red temporales
+        // Suppress temporary network glitches
       }
     };
 
-    // Comprobar cada 30 segundos
-    const interval = setInterval(checkVersion, 30000);
+    // Poll every 15 seconds for automatic version updates
+    const interval = setInterval(checkVersion, 15000);
 
-    // Comprobar al dar foco o cambiar a la pestaña
+    // Also check immediately when user switches back to the app/tab
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         checkVersion();
       }
     };
 
+    window.addEventListener('focus', checkVersion);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       clearInterval(interval);
+      window.removeEventListener('focus', checkVersion);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
-  const handleRefresh = () => {
-    window.location.reload();
-  };
-
-  if (!hasUpdate || dismissed) return null;
+  if (!isReloading) return null;
 
   return (
-    <div className="fixed top-14 sm:top-16 left-1/2 -translate-x-1/2 z-[1000] w-[94%] max-w-md animate-fade-in">
-      <div className="bg-gradient-to-r from-brand-600 via-teal-600 to-emerald-600 text-white p-3 rounded-2xl shadow-[0_10px_35px_rgba(20,184,166,0.6)] border border-teal-300/40 backdrop-blur-xl flex items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0 border border-white/30">
-            <RefreshCw size={16} className="animate-spin text-white" />
+    <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[2000] w-[92%] max-w-md animate-fade-in">
+      <div className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 text-white p-3 rounded-2xl shadow-[0_10px_35px_rgba(20,184,166,0.6)] border border-teal-300/50 backdrop-blur-2xl flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0 border border-white/30">
+            <RefreshCw size={18} className="animate-spin text-white" />
           </div>
-          <div className="overflow-hidden">
-            <h4 className="text-xs font-bold flex items-center gap-1">
-              <span>🚀 ¡Nueva versión disponible!</span>
-              <Sparkles size={12} className="text-amber-300 animate-pulse" />
+          <div>
+            <h4 className="text-xs font-extrabold flex items-center gap-1 text-white">
+              <span>🚀 ¡Nueva versión detectada!</span>
+              <Sparkles size={13} className="text-amber-300 animate-pulse" />
             </h4>
-            <p className="text-[11px] text-teal-100 truncate">
-              Hay actualizaciones en iTRAVEL_MAP.
+            <p className="text-[11px] text-teal-100 font-medium">
+              Actualizando la aplicación automáticamente...
             </p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={handleRefresh}
-            className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1"
-          >
-            <RefreshCw size={12} />
-            <span>Actualizar</span>
-          </button>
-          <button
-            onClick={() => setDismissed(true)}
-            className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-            title="Descartar por ahora"
-          >
-            <X size={15} />
-          </button>
         </div>
       </div>
     </div>
