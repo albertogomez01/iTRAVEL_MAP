@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { ItineraryOption, MapTarget } from '../types';
-import { Loader2, Navigation, Compass, Layers, Bed, Landmark, Coffee, Camera, Eye, EyeOff, MessageSquarePlus, ZoomIn, ZoomOut, Search, Maximize2, MapPin, ChevronDown, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
+import { Loader2, Navigation, Compass, Layers, Bed, Landmark, Coffee, Camera, Eye, EyeOff, MessageSquarePlus, ZoomIn, ZoomOut, Search, Maximize2, MapPin, ChevronDown, ChevronLeft, ChevronRight, Globe, Clock } from 'lucide-react';
 import { getRealisticRoute } from '../services/routeService';
 import { LayerSelector } from './LayerSelector';
 import { GlassPopup } from './GlassPopup';
@@ -568,29 +568,82 @@ export const MapView: React.FC<MapViewProps> = ({
             position={[day.coordinates!.lat, day.coordinates!.lng]} 
             icon={getDayIcon(day.dayNumber)}
           >
-            <Popup className="rounded-2xl">
-              <GlassPopup>
-                <strong className="text-slate-900 text-sm font-bold block mb-1">Día {day.dayNumber}: {day.location}</strong>
-                {day.theme && <span className="text-xs text-slate-500 block mb-2">{day.theme}</span>}
-                
-                <button
-                  onClick={() => {
-                    setInternalTarget({ lat: day.coordinates!.lat, lng: day.coordinates!.lng, zoom: 14.5, label: day.location });
-                    setShowMobilePanel(false);
-                  }}
-                  className="w-full text-xs bg-brand-500 hover:bg-brand-600 text-white font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 mb-2 shadow-sm"
-                >
-                  <ZoomIn size={13} />
-                  <span>Agrandar Ciudad y Ver Hoteles</span>
-                </button>
+            <Popup className="rounded-2xl min-w-[240px] max-w-[285px]">
+              <div className="font-sans p-1">
+                {/* Header */}
+                <div className="flex items-center justify-between gap-2 mb-1.5 pb-1.5 border-b border-slate-100">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="bg-teal-600 text-white font-extrabold text-[11px] px-2 py-0.5 rounded-md shadow-sm shrink-0">
+                      Día {day.dayNumber}
+                    </span>
+                    <h4 className="text-slate-900 font-bold text-sm leading-tight truncate">{day.location}</h4>
+                  </div>
+                </div>
 
-                {day.transport && day.transport.length > 0 && (
-                  <div className="text-xs text-brand-600 font-semibold pt-1 border-t border-slate-100 flex items-center gap-1">
-                    <Navigation size={12} />
-                    <span>Llegada en {day.transport[0].mode}</span>
+                {/* Suggested stay duration */}
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 mb-2 font-medium bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                  <Clock size={13} className="text-teal-600 shrink-0" />
+                  <span>Estancia sugerida: <strong className="text-slate-800">1 jornada</strong></span>
+                </div>
+
+                {day.theme && (
+                  <p className="text-xs text-slate-600 italic mb-2 bg-teal-50/50 p-1.5 rounded-lg border border-teal-100/60">
+                    🎯 {day.theme}
+                  </p>
+                )}
+
+                {/* POIs list */}
+                {day.pois && day.pois.length > 0 && (
+                  <div className="mb-2.5">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <Landmark size={11} className="text-teal-600" />
+                      Sitios destacados (POIs)
+                    </div>
+                    <div className="space-y-1 max-h-32 overflow-y-auto pr-0.5">
+                      {day.pois.map((poi, pIdx) => (
+                        <div key={pIdx} className="text-xs bg-slate-50 p-1.5 rounded-lg border border-slate-100 flex items-start gap-1.5">
+                          <span className="shrink-0 text-xs leading-none mt-0.5">{getPoiEmoji(poi.category)}</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-semibold text-slate-800 block truncate text-[11px]">{poi.name}</span>
+                            {poi.description && <span className="text-[10px] text-slate-500 line-clamp-1 block">{poi.description}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
-              </GlassPopup>
+
+                {/* Transport info */}
+                {day.transport && day.transport.length > 0 && (
+                  <div className="text-[11px] text-teal-700 bg-teal-50 p-1.5 rounded-lg font-semibold mb-2 flex items-center gap-1.5 border border-teal-100">
+                    <Navigation size={12} className="shrink-0" />
+                    <span className="truncate">Llegada: {day.transport[0].mode} ({day.transport[0].from} → {day.transport[0].to})</span>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-1.5 pt-1.5 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setInternalTarget({ lat: day.coordinates!.lat, lng: day.coordinates!.lng, zoom: 14.5, label: day.location });
+                      setShowMobilePanel(false);
+                    }}
+                    className="flex-1 text-[11px] bg-teal-600 hover:bg-teal-700 text-white font-semibold py-1.5 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                  >
+                    <ZoomIn size={12} />
+                    <span>Zoom Ciudad</span>
+                  </button>
+                  {onAskCopilot && (
+                    <button
+                      onClick={() => onAskCopilot(`el itinerario y actividades del Día ${day.dayNumber} en ${day.location}`)}
+                      className="flex-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-1.5 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
+                    >
+                      <MessageSquarePlus size={12} />
+                      <span>Preguntar</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </Popup>
           </Marker>
         ))}

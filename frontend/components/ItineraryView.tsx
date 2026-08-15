@@ -166,30 +166,30 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
           <div className={`transition-opacity duration-500 ${isUpdating ? 'opacity-50' : 'opacity-100'}`}>
             {(!tripPlan || !tripPlan.options || tripPlan.options.length === 0) ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center my-12">
-                <Map size={48} className="mb-4 opacity-20" />
-                <h3 className="text-lg font-medium text-slate-600 mb-2">Aún no hay itinerario activo</h3>
-                <p className="text-sm max-w-md">
+                <Map size={48} className="mb-4 opacity-20 text-teal-400" />
+                <h3 className="text-lg font-medium text-slate-200 mb-2">Aún no hay itinerario activo</h3>
+                <p className="text-sm text-slate-400 max-w-md">
                   Dime desde dónde sales y a dónde quieres ir en el chat inferior. Te prepararé 3 opciones de ruta diferentes.
                 </p>
               </div>
             ) : (
               <>
                 {/* Cabecera con el Origen */}
-                <div className="mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between gap-3">
+                <div className="mb-6 bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl flex items-center justify-between gap-3 backdrop-blur-md">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 bg-teal-500/20 text-teal-400 rounded-2xl flex items-center justify-center shrink-0 border border-teal-500/30">
                       <MapPin size={20} />
                     </div>
                     <div>
                       <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Punto de Origen</div>
-                      <div className="text-lg font-bold text-slate-800">{tripPlan.origin}</div>
+                      <div className="text-lg font-bold text-white">{tripPlan.origin}</div>
                     </div>
                   </div>
 
                   {onAskCopilot && (
                     <button
                       onClick={(e) => handleAsk(e, `el origen ${tripPlan.origin}`)}
-                      className="flex items-center gap-1.5 text-xs font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 text-xs font-medium text-teal-300 bg-teal-950/60 hover:bg-teal-900/80 px-3 py-1.5 rounded-xl border border-teal-500/30 transition-all cursor-pointer"
                     >
                       <MessageSquarePlus size={14} />
                       <span>Consultar Origen</span>
@@ -197,22 +197,22 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                   )}
                 </div>
 
-                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Opciones de Ruta</h3>
+                <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-4">Opciones de Ruta Disponibles</h3>
                 
                 <div className="space-y-4">
                   {tripPlan.options.map((option, idx) => {
                     const isSelected = option.id === selectedOptionId || (!selectedOptionId && idx === 0);
                     const tagClass = idx === 0 
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                      ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' 
                       : idx === 1 
-                        ? 'bg-sky-100 text-sky-800 border-sky-300' 
-                        : 'bg-purple-100 text-purple-800 border-purple-300';
+                        ? 'bg-sky-950/80 text-sky-300 border-sky-500/40' 
+                        : 'bg-purple-950/80 text-purple-300 border-purple-500/40';
                     const tagText = idx === 0 ? 'Opción 1 • Económica' : idx === 1 ? 'Opción 2 • Equilibrada' : 'Opción 3 • Rápida';
                     
                     return (
                       <div 
                         key={option.id} 
-                        className={`bg-white rounded-xl border transition-all duration-300 overflow-hidden ${isSelected ? 'border-brand-500 ring-2 ring-brand-500/20 shadow-md' : 'border-slate-200 hover:border-brand-300 shadow-sm cursor-pointer'}`}
+                        className={`rounded-2xl border transition-all duration-300 overflow-hidden backdrop-blur-md ${isSelected ? 'bg-slate-900/95 border-teal-500/70 ring-2 ring-teal-500/20 shadow-2xl' : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 shadow-lg cursor-pointer'}`}
                       >
                         {/* Tarjeta Resumen */}
                         <div 
@@ -221,58 +221,58 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${tagClass}`}>
+                              <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border ${tagClass}`}>
                                 {tagText}
                               </span>
                             </div>
-                            <h4 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <h4 className="text-lg font-bold text-white flex items-center gap-2">
                               {option.title}
                             </h4>
-                            <p className="text-sm text-slate-600 mt-1">{option.summary}</p>
+                            <p className="text-xs text-slate-400 mt-1">{option.summary}</p>
                           </div>
                           
                           <div className="flex items-center gap-4 shrink-0">
                             <div className="flex flex-col items-end">
-                              <div className="flex items-center gap-1 text-sm font-semibold text-slate-700">
-                                <Clock size={14} className="text-brand-500" /> {option.totalDuration}
+                              <div className="flex items-center gap-1 text-xs font-semibold text-slate-300">
+                                <Clock size={14} className="text-teal-400" /> {option.totalDuration}
                               </div>
-                              <div className="flex items-center gap-1 text-sm font-semibold text-slate-700">
-                                <Wallet size={14} className="text-emerald-500" /> {option.estimatedBudget}
+                              <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
+                                <Wallet size={14} /> {option.estimatedBudget}
                               </div>
                             </div>
                             <button 
                               onClick={(e) => { e.stopPropagation(); onSelectOption(isSelected ? '' : option.id); }}
-                              className={`p-2 rounded-full transition-colors ${isSelected ? 'bg-brand-100 text-brand-600' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                              className={`p-2 rounded-xl transition-colors ${isSelected ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
                             >
-                              {isSelected ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                              {isSelected ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                             </button>
                           </div>
                         </div>
 
                         {/* Contenido Expandido */}
                         {isSelected && (
-                          <div className="border-t border-slate-100 bg-slate-50/50 p-4 sm:p-6">
+                          <div className="border-t border-slate-800 bg-slate-950/60 p-4 sm:p-5">
                             
                             {/* Enlaces de Reserva */}
                             {option.bookingLinks && option.bookingLinks.length > 0 && (
-                              <div className="mb-8">
-                                <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Enlaces Útiles & Reservas</h5>
+                              <div className="mb-6">
+                                <h5 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">Enlaces Útiles & Reservas</h5>
                                 <div className="flex flex-wrap gap-2">
                                   {option.bookingLinks.map((link, idx) => (
-                                    <div key={idx} className="inline-flex items-center bg-white border border-slate-200 rounded-full text-sm font-medium shadow-sm overflow-hidden group">
+                                    <div key={idx} className="inline-flex items-center bg-slate-900 border border-slate-800 rounded-xl text-xs font-medium shadow-sm overflow-hidden group">
                                       <a 
                                         href={link.url} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1.5 hover:text-brand-600 text-slate-700 px-3 py-1.5 transition-colors"
+                                        className="inline-flex items-center gap-1.5 hover:text-teal-300 text-slate-300 px-3 py-1.5 transition-colors"
                                       >
-                                        {link.type === 'Transport' ? <Train size={14} /> : link.type === 'Accommodation' ? <Bed size={14} /> : <ExternalLink size={14} />}
+                                        {link.type === 'Transport' ? <Train size={14} className="text-teal-400" /> : link.type === 'Accommodation' ? <Bed size={14} className="text-indigo-400" /> : <ExternalLink size={14} />}
                                         {link.name}
                                       </a>
                                       {onAskCopilot && (
                                         <button
                                           onClick={(e) => handleAsk(e, `el enlace de reserva ${link.name} (${link.url})`)}
-                                          className="px-2 py-1.5 bg-slate-100 hover:bg-brand-50 text-slate-500 hover:text-brand-600 border-l border-slate-200 transition-colors"
+                                          className="px-2 py-1.5 bg-slate-800/80 hover:bg-teal-900/50 text-slate-400 hover:text-teal-300 border-l border-slate-800 transition-colors"
                                           title="Discutir este enlace en el chat"
                                         >
                                           <MessageSquarePlus size={13} />
@@ -285,59 +285,74 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                             )}
 
                             {/* Timeline del Itinerario */}
-                            <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
+                            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-800 before:to-transparent">
                               {option.days.map((day, index) => (
                                 <div key={index} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                                   
                                   {/* Timeline Node */}
-                                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-brand-500 text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
-                                    <span className="text-sm font-bold">{day.dayNumber}</span>
+                                  <div className="flex items-center justify-center w-10 h-10 rounded-2xl border-2 border-teal-500/50 bg-slate-900 text-teal-300 font-extrabold text-sm shadow-xl shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                                    <span>{day.dayNumber}</span>
                                   </div>
                                   
-                                  {/* Card del Día */}
-                                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 bg-white shadow-sm hover:border-brand-300 transition-all">
-                                    <div className="flex items-center justify-between mb-3">
-                                      <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                                        {day.location}
+                                  {/* Card del Día - Clicking card centers & zooms map onto city */}
+                                  <div 
+                                    onClick={(e) => {
+                                      if (day.coordinates && onFocusTarget) {
+                                        handleFocus(e, { lat: day.coordinates.lat, lng: day.coordinates.lng, zoom: 14.5, label: day.location });
+                                      }
+                                    }}
+                                    className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-slate-800/90 bg-slate-900/90 shadow-xl hover:border-teal-500/60 hover:shadow-teal-900/20 transition-all cursor-pointer group/card"
+                                  >
+                                    {/* Card Header */}
+                                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800/80">
+                                      <h3 className="font-bold text-base text-white flex items-center gap-2 group-hover/card:text-teal-300 transition-colors">
+                                        <span>Día {day.dayNumber}: {day.location}</span>
+                                      </h3>
+
+                                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                         {day.coordinates && onFocusTarget && (
                                           <button
-                                            onClick={(e) => handleFocus(e, { lat: day.coordinates!.lat, lng: day.coordinates!.lng, zoom: 13, label: day.location })}
-                                            className="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 p-1 px-2 rounded-lg transition-colors font-normal flex items-center gap-1"
-                                            title="Ver ciudad en el mapa"
+                                            onClick={(e) => handleFocus(e, { lat: day.coordinates!.lat, lng: day.coordinates!.lng, zoom: 14.5, label: day.location })}
+                                            className="text-xs text-teal-300 bg-teal-950/80 hover:bg-teal-900 border border-teal-500/40 p-1 px-2 rounded-xl transition-all font-semibold flex items-center gap-1 active:scale-95 cursor-pointer"
+                                            title="Centrar y hacer zoom en el mapa"
                                           >
                                             <Locate size={12} />
-                                            <span>Mapa</span>
+                                            <span>Ver Mapa</span>
                                           </button>
                                         )}
                                         {onAskCopilot && (
                                           <button
                                             onClick={(e) => handleAsk(e, `el Día ${day.dayNumber} en ${day.location}`)}
-                                            className="text-xs text-brand-600 bg-brand-50 hover:bg-brand-100 p-1 px-2 rounded-lg transition-colors font-normal flex items-center gap-1"
+                                            className="text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 p-1 px-2 rounded-xl transition-colors font-medium flex items-center gap-1 active:scale-95 cursor-pointer"
                                             title="Preguntar sobre este día"
                                           >
                                             <MessageSquarePlus size={12} />
-                                            <span>Preguntar</span>
                                           </button>
                                         )}
-                                      </h3>
-                                      {day.theme && <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-full">{day.theme}</span>}
+                                      </div>
                                     </div>
+
+                                    {day.theme && (
+                                      <p className="text-xs text-teal-300/90 italic mb-3 bg-teal-950/40 p-2 rounded-xl border border-teal-500/20">
+                                        🎯 {day.theme}
+                                      </p>
+                                    )}
 
                                     {/* Transport Section */}
                                     {day.transport && day.transport.length > 0 && (
-                                      <div className="mb-4 space-y-2">
+                                      <div className="mb-3 space-y-2">
                                         {day.transport.map((t, i) => (
-                                          <div key={i} className="flex flex-col gap-2 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                          <div key={i} className="flex flex-col gap-1.5 text-xs bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
                                             <div className="flex items-start justify-between gap-2">
                                               <div className="flex items-start gap-2 flex-1">
-                                                <div className="mt-0.5 text-brand-600"><TransportIcon mode={t.mode} /></div>
+                                                <div className="mt-0.5 text-teal-400"><TransportIcon mode={t.mode} /></div>
                                                 <div className="flex-1">
-                                                  <div className="font-medium text-slate-700">
+                                                  <div className="font-semibold text-slate-200">
                                                     {t.mode} {t.provider ? `(${t.provider})` : ''}: {t.from} → {t.to}
                                                   </div>
                                                   {t.requiresReservation && (
-                                                    <div className="flex items-center gap-1 text-xs text-amber-600 mt-1 font-medium">
-                                                      <AlertCircle size={12} /> Reserva Obligatoria
+                                                    <div className="flex items-center gap-1 text-[11px] text-amber-400 mt-0.5 font-medium">
+                                                      <AlertCircle size={11} /> Reserva Obligatoria
                                                     </div>
                                                   )}
                                                 </div>
@@ -346,17 +361,17 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                                               {onAskCopilot && (
                                                 <button
                                                   onClick={(e) => handleAsk(e, `el transporte en ${t.mode} de ${t.from} a ${t.to}`)}
-                                                  className="text-xs text-slate-500 hover:text-brand-600 hover:bg-white p-1 rounded transition-colors"
+                                                  className="text-slate-400 hover:text-teal-300 p-1 rounded transition-colors"
                                                   title="Consultar transporte en el chat"
                                                 >
-                                                  <MessageSquarePlus size={14} />
+                                                  <MessageSquarePlus size={13} />
                                                 </button>
                                               )}
                                             </div>
 
                                             {t.duration && (
-                                              <div className="flex items-center gap-1.5 bg-brand-100 text-brand-700 px-2.5 py-1 rounded-md w-fit text-xs font-bold ml-6">
-                                                <Clock size={12} /> Duración: {t.duration}
+                                              <div className="flex items-center gap-1 bg-teal-950/80 text-teal-300 px-2 py-0.5 rounded-lg w-fit text-[11px] font-bold border border-teal-500/30">
+                                                <Clock size={11} /> Duración: {t.duration}
                                               </div>
                                             )}
                                           </div>
@@ -366,42 +381,44 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
 
                                     {/* POIs Section */}
                                     {day.pois && day.pois.length > 0 && (
-                                      <div className="mb-4">
-                                        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Destacados</h4>
-                                        <ul className="space-y-2">
+                                      <div className="mb-3">
+                                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                                          <Landmark size={11} className="text-teal-400" /> Lugares Destacados
+                                        </h4>
+                                        <ul className="space-y-1.5">
                                           {day.pois.map((poi, i) => (
-                                            <li key={i} className="text-sm border-b border-slate-100 pb-2 last:border-none last:pb-0">
-                                              <div className="flex items-center justify-between gap-1.5 font-medium text-slate-800">
-                                                <div className="flex items-center gap-1.5">
+                                            <li key={i} className="text-xs bg-slate-950/50 p-2 rounded-xl border border-slate-800/80">
+                                              <div className="flex items-center justify-between gap-1.5 font-semibold text-slate-200">
+                                                <div className="flex items-center gap-1.5 min-w-0">
                                                   <POIIcon category={poi.category} />
-                                                  <span>{poi.name}</span>
+                                                  <span className="truncate">{poi.name}</span>
                                                 </div>
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                                                   {poi.coordinates && onFocusTarget && (
                                                     <button
                                                       onClick={(e) => handleFocus(e, { lat: poi.coordinates!.lat, lng: poi.coordinates!.lng, zoom: 16, label: poi.name })}
-                                                      className="text-xs text-teal-700 hover:bg-teal-50 p-1 px-1.5 rounded transition-colors flex items-center gap-0.5"
+                                                      className="text-[11px] text-teal-300 hover:bg-teal-900/50 px-1.5 py-0.5 rounded-lg transition-colors flex items-center gap-0.5 border border-teal-500/30"
                                                       title="Ver este sitio en el mapa"
                                                     >
-                                                      <Locate size={12} />
-                                                      <span className="text-[11px]">Mapa</span>
+                                                      <Locate size={11} />
+                                                      <span>Mapa</span>
                                                     </button>
                                                   )}
                                                   {onAskCopilot && (
                                                     <button
                                                       onClick={(e) => handleAsk(e, `el lugar de interés ${poi.name} en ${day.location}`)}
-                                                      className="text-xs text-slate-400 hover:text-brand-600 p-1 rounded transition-colors"
+                                                      className="text-slate-400 hover:text-teal-300 p-0.5 rounded transition-colors"
                                                       title="Discutir esta atracción en el chat"
                                                     >
-                                                      <MessageSquarePlus size={13} />
+                                                      <MessageSquarePlus size={12} />
                                                     </button>
                                                   )}
                                                 </div>
                                               </div>
-                                              <p className="text-slate-600 text-xs mt-0.5 pl-5">{poi.description}</p>
+                                              {poi.description && <p className="text-slate-400 text-[11px] mt-1 pl-5">{poi.description}</p>}
                                               {poi.tips && (
-                                                <div className="flex items-start gap-1 text-xs text-brand-600 mt-1 pl-5 italic">
-                                                  <Info size={12} className="mt-0.5 shrink-0" />
+                                                <div className="flex items-start gap-1 text-[11px] text-amber-300 mt-1 pl-5 italic bg-amber-950/30 p-1 rounded-lg border border-amber-500/20">
+                                                  <Info size={11} className="mt-0.5 shrink-0 text-amber-400" />
                                                   <span>{poi.tips}</span>
                                                 </div>
                                               )}
@@ -413,44 +430,33 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
 
                                     {/* Accommodation Section */}
                                     {day.accommodation && (
-                                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                                        <div>
-                                          <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                                      <div className="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200 truncate">
                                             {day.accommodation.type.includes('Night') ? (
-                                              <Moon size={16} className="text-indigo-500" />
+                                              <Moon size={14} className="text-indigo-400 shrink-0" />
                                             ) : (
-                                              <Bed size={16} className="text-blue-500" />
+                                              <Bed size={14} className="text-sky-400 shrink-0" />
                                             )}
-                                            {day.accommodation.type}: {day.accommodation.name}
+                                            <span className="truncate">{day.accommodation.type}: {day.accommodation.name}</span>
                                           </div>
-                                          <div className="text-xs text-slate-500 pl-6 mt-0.5">{day.accommodation.location}</div>
+                                          <div className="text-[11px] text-slate-400 pl-5 truncate">{day.accommodation.location}</div>
                                         </div>
 
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                                           {day.accommodation.coordinates && onFocusTarget && (
                                             <button
                                               onClick={(e) => handleFocus(e, { lat: day.accommodation!.coordinates!.lat, lng: day.accommodation!.coordinates!.lng, zoom: 16, label: day.accommodation!.name })}
-                                              className="text-xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100 p-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                              className="text-[11px] text-indigo-300 bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-500/30 px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
                                               title="Ver hotel en el mapa"
                                             >
-                                              <Locate size={13} />
-                                              <span className="hidden sm:inline">Ver Mapa</span>
-                                            </button>
-                                          )}
-                                          {onAskCopilot && (
-                                            <button
-                                              onClick={(e) => handleAsk(e, `el alojamiento ${day.accommodation?.name} en ${day.location}`)}
-                                              className="text-xs text-slate-500 hover:text-brand-600 bg-slate-100 hover:bg-brand-50 p-1.5 rounded-lg transition-colors flex items-center gap-1"
-                                              title="Discutir alojamiento en el chat"
-                                            >
-                                              <MessageSquarePlus size={13} />
-                                              <span className="hidden sm:inline">Consultar</span>
+                                              <Locate size={11} />
+                                              <span>Mapa</span>
                                             </button>
                                           )}
                                         </div>
                                       </div>
                                     )}
-
                                   </div>
                                 </div>
                               ))}

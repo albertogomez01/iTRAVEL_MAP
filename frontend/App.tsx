@@ -27,6 +27,38 @@ interface UserSession {
   photoURL?: string;
 }
 
+// URL Serialization Helpers for sharing full trip route states
+const serializeRouteState = (plan: TripPlan, pref: UserPreferences, optId: string | null): string => {
+  try {
+    const payload = { p: plan, pr: pref, opt: optId };
+    const jsonStr = JSON.stringify(payload);
+    // Base64 encoding with Unicode / Spanish accents support
+    const b64 = btoa(encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, (match, p1) => 
+      String.fromCharCode(parseInt(p1, 16))
+    ));
+    return b64;
+  } catch (e) {
+    console.error('Error serializing route state:', e);
+    return '';
+  }
+};
+
+const deserializeRouteState = (encoded: string): { plan: TripPlan; pref: UserPreferences; optId: string | null } | null => {
+  try {
+    const jsonStr = decodeURIComponent(Array.prototype.map.call(atob(encoded), (c: string) => 
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join(''));
+    const payload = JSON.parse(jsonStr);
+    if (payload && payload.p && payload.p.options) {
+      return { plan: payload.p, pref: payload.pr || {}, optId: payload.opt || null };
+    }
+    return null;
+  } catch (e) {
+    console.error('Error deserializing shared route state:', e);
+    return null;
+  }
+};
+
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
@@ -162,6 +194,15 @@ export default function App() {
   const [isUpdatingItinerary, setIsUpdatingItinerary] = useState(false);
   const [focusedTarget, setFocusedTarget] = useState<MapTarget | null>(null);
   
+  // Toast notification state
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const triggerToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  }, []);
+
   const [preferences, setPreferences] = useState<UserPreferences>({
     originLocation: '',
     preferNightTrains: false,
@@ -175,6 +216,51 @@ export default function App() {
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Read shared route state from URL hash or query param on initial load
+  useEffect(() => {
+    try {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      let sharedCode: string | null = null;
+
+      if (hash.includes('route=')) {
+        sharedCode = hash.split('route=')[1]?.split('&')[0] || null;
+      } else if (search.includes('route=')) {
+        const params = new URLSearchParams(search);
+        sharedCode = params.get('route');
+      }
+
+      if (sharedCode) {
+        const sharedState = deserializeRouteState(sharedCode);
+        if (sharedState && sharedState.plan) {
+          setTripPlan(sharedState.plan);
+          if (sharedState.pref && Object.keys(sharedState.pref).length > 0) {
+            setPreferences(sharedState.pref);
+          }
+          if (sharedState.optId) {
+            setSelectedOptionId(sharedState.optId);
+          } else if (sharedState.plan.options?.[0]?.id) {
+            setSelectedOptionId(sharedState.plan.options[0].id);
+          }
+          setIsItineraryOpen(true);
+          setIsChatOpen(false);
+
+          const destTitle = sharedState.plan.options?.[0]?.title || 'Viaje';
+          setMessages(prev => [
+            ...prev,
+            {
+              id: Date.now().toString(),
+              role: 'model',
+              text: `🗺️ **¡Ruta compartida cargada con éxito!** Se ha restaurado la ruta completa para **${sharedState.plan.origin} → ${destTitle}**. Abre la pestaña 'Ruta' para explorar el itinerario o haz clic en los marcadores del mapa.`
+            }
+          ]);
+        }
+      }
+    } catch (e) {
+      console.warn("Error al cargar la ruta compartida:", e);
+    }
+  }, []);
 
   // Inicializar chat
   useEffect(() => {
@@ -457,21 +543,42 @@ export default function App() {
   const [isCopied, setIsCopied] = useState(false);
 
   const handleShareApp = async () => {
-    const shareData = {
-      title: 'iTRAVEL_MAP - Tu Copiloto de Viajes con IA',
-      text: 'Planifica tus viajes paso a paso con iTRAVEL_MAP: itinerarios inteligentes, transportes y rutas interactivas en mapa.',
-      url: window.location.href
-    };
+    let shareUrl = window.location.href;
+
+    // Serialize route state into URL hash if active trip exists
+    if (tripPlan && tripPlan.options && tripPlan.options.length > 0) {
+      const serialized = serializeRouteState(tripPlan, preferences, selectedOptionId);
+      if (serialized) {
+        const baseUrl = window.location.origin + window.location.pathname;
+        shareUrl = `${baseUrl}#route=${serialized}`;
+        try {
+          window.history.replaceState(null, '', shareUrl);
+        } catch (e) {}
+      }
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setIsCopied(true);
+        triggerToast("¡Enlace copiado!");
+        setTimeout(() => setIsCopied(false), 2500);
+        return;
+      } catch (err) {}
+    }
 
     if (navigator.share) {
       try {
-        await navigator.share(shareData);
-      } catch (err) {
-        // User cancelled or share dismissed
-      }
+        await navigator.share({
+          title: 'iTRAVEL_MAP - Ruta de Viaje Compartida',
+          text: `Explora esta ruta de viaje en iTRAVEL_MAP: ${tripPlan?.origin || 'Origen'} → ${tripPlan?.options?.[0]?.title || 'Destino'}`,
+          url: shareUrl
+        });
+        triggerToast("¡Ruta compartida!");
+      } catch (err) {}
     } else {
-      navigator.clipboard.writeText(window.location.href);
       setIsCopied(true);
+      triggerToast("¡Enlace copiado!");
       setTimeout(() => setIsCopied(false), 2500);
     }
   };
@@ -492,6 +599,16 @@ export default function App() {
             <span className="text-xs font-bold text-white tracking-wide truncate">Copiloto IA pensando...</span>
             <span className="text-[10px] text-slate-300 truncate">Organizando el itinerario y buscando precios</span>
           </div>
+        </div>
+      )}
+
+      {/* FLOATING TOAST NOTIFICATION */}
+      {toastMessage && (
+        <div className="fixed bottom-20 landscape:bottom-16 sm:bottom-6 right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-[600] bg-slate-900/95 text-white backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-emerald-500/50 shadow-2xl flex items-center gap-2.5 animate-fade-in text-xs font-bold">
+          <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+            <Check size={13} />
+          </div>
+          <span>{toastMessage}</span>
         </div>
       )}
 
@@ -672,7 +789,7 @@ export default function App() {
 
         {/* 3. UNIFIED COPILOT & ITINERARY DOCK PANEL */}
         {(isChatOpen || isItineraryOpen) && (
-          <aside className="fixed inset-x-2 bottom-2 top-auto h-[60vh] max-h-[540px] z-30 bg-slate-950/95 backdrop-blur-2xl border border-slate-800 flex flex-col transition-all duration-300 shadow-2xl rounded-3xl lg:relative lg:inset-auto lg:h-full lg:max-h-none lg:w-[460px] xl:w-[520px] lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:shrink-0">
+          <aside className="fixed inset-x-2 bottom-16 sm:bottom-2 top-auto h-[60vh] max-h-[520px] z-30 bg-slate-950/95 backdrop-blur-2xl border border-slate-800 flex flex-col transition-all duration-300 shadow-2xl rounded-3xl lg:relative lg:inset-auto lg:h-full lg:max-h-none lg:w-[460px] xl:w-[520px] lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:shrink-0">
             
             {/* Dock Header with Tabs & Controls */}
             <div className="p-3 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900/60">
@@ -791,6 +908,58 @@ export default function App() {
         )}
 
       </div>
+
+      {/* 4. MOBILE BOTTOM NAVIGATION BAR */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-[45] bg-slate-950/95 backdrop-blur-2xl border-t border-slate-800 flex items-center justify-around py-1.5 shadow-2xl px-2">
+        <button
+          onClick={() => {
+            setIsChatOpen(false);
+            setIsItineraryOpen(false);
+            setIsMobileSidebarOpen(false);
+          }}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all cursor-pointer ${!isChatOpen && !isItineraryOpen && !isMobileSidebarOpen ? 'text-teal-400 font-bold scale-105' : 'text-slate-400 hover:text-white'}`}
+        >
+          <MapIcon size={18} />
+          <span className="text-[10px] font-bold">Mapa</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setIsChatOpen(true);
+            setIsItineraryOpen(false);
+            setIsMobileSidebarOpen(false);
+          }}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all cursor-pointer relative ${isChatOpen ? 'text-teal-400 font-bold scale-105' : 'text-slate-400 hover:text-white'}`}
+        >
+          <MessageSquare size={18} />
+          <span className="text-[10px] font-bold">Copiloto</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setIsItineraryOpen(true);
+            setIsChatOpen(false);
+            setIsMobileSidebarOpen(false);
+          }}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all cursor-pointer relative ${isItineraryOpen ? 'text-teal-400 font-bold scale-105' : 'text-slate-400 hover:text-white'}`}
+        >
+          <Calendar size={18} />
+          <span className="text-[10px] font-bold">Itinerario</span>
+          {tripPlan?.options && tripPlan.options.length > 0 && (
+            <span className="absolute top-1 right-2.5 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            setIsMobileSidebarOpen(true);
+          }}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all cursor-pointer ${isMobileSidebarOpen ? 'text-teal-400 font-bold scale-105' : 'text-slate-400 hover:text-white'}`}
+        >
+          <Menu size={18} />
+          <span className="text-[10px] font-bold">Filtros</span>
+        </button>
+      </nav>
 
       {/* 4. SYSTEM MODALS */}
       <LoginModal 

@@ -83,12 +83,15 @@
 
         /* Leaflet overrides */
         .leaflet-container { z-index: 0 !important; font-family: inherit !important; }
+        .leaflet-popup { max-width: 90vw !important; }
         .leaflet-popup-content-wrapper {
             background: #ffffff !important;
             color: #0f172a !important;
             border-radius: 1rem !important;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2) !important;
             padding: 4px !important;
+            max-height: 60vh !important;
+            overflow-y: auto !important;
         }
         .leaflet-popup-tip {
             background: #ffffff !important;
