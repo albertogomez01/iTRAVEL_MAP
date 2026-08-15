@@ -4,6 +4,7 @@ import L from 'leaflet';
 import { ItineraryOption, MapTarget } from '../types';
 import { Loader2, Navigation, Compass, Layers, Bed, Landmark, Coffee, Camera, Eye, EyeOff, MessageSquarePlus, ZoomIn, ZoomOut, Search, Maximize2, MapPin, ChevronDown, ChevronLeft, ChevronRight, Globe, Clock } from 'lucide-react';
 import { getRealisticRoute } from '../services/routeService';
+import { fetchCityWeather, CityWeather } from '../services/weatherService';
 import { LayerSelector } from './LayerSelector';
 import { GlassPopup } from './GlassPopup';
 
@@ -243,6 +244,30 @@ export const MapView: React.FC<MapViewProps> = ({
   const validDays = option?.days?.filter(
     d => d.coordinates && typeof d.coordinates.lat === 'number' && typeof d.coordinates.lng === 'number'
   ) || [];
+
+  // Real-time Open-Meteo Weather State
+  const [weatherMap, setWeatherMap] = useState<Record<number, CityWeather>>({});
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadWeather = async () => {
+      if (!validDays || validDays.length === 0) return;
+      const newMap: Record<number, CityWeather> = {};
+      for (const day of validDays) {
+        if (day.coordinates) {
+          const w = await fetchCityWeather(day.coordinates.lat, day.coordinates.lng);
+          if (w) {
+            newMap[day.dayNumber] = w;
+          }
+        }
+      }
+      if (isMounted) {
+        setWeatherMap(newMap);
+      }
+    };
+    loadWeather();
+    return () => { isMounted = false; };
+  }, [option]);
 
   // Sync active index when focusedTarget changes
   useEffect(() => {
@@ -580,10 +605,18 @@ export const MapView: React.FC<MapViewProps> = ({
                   </div>
                 </div>
 
-                {/* Suggested stay duration */}
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-600 mb-2 font-medium bg-slate-50 p-1.5 rounded-lg border border-slate-100">
-                  <Clock size={13} className="text-teal-600 shrink-0" />
-                  <span>Estancia sugerida: <strong className="text-slate-800">1 jornada</strong></span>
+                {/* Suggested stay duration & Weather */}
+                <div className="flex items-center justify-between gap-1.5 text-[11px] text-slate-600 mb-2 font-medium bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                  <div className="flex items-center gap-1">
+                    <Clock size={13} className="text-teal-600 shrink-0" />
+                    <span>Estancia: <strong className="text-slate-800">1 jornada</strong></span>
+                  </div>
+                  {weatherMap[day.dayNumber] && (
+                    <div className="flex items-center gap-1 font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/80 shrink-0 text-[10.5px]">
+                      <span>{weatherMap[day.dayNumber].emoji}</span>
+                      <span>{weatherMap[day.dayNumber].tempMax}° / {weatherMap[day.dayNumber].tempMin}°C</span>
+                    </div>
+                  )}
                 </div>
 
                 {day.theme && (

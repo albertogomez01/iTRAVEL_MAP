@@ -1,0 +1,25 @@
+{
+  "name": "iTRAVEL_MAP - Tu Copiloto de Viajes con IA",
+  "short_name": "iTRAVEL_MAP",
+  "description": "Planifica tus viajes paso a paso con IA: rutas en mapa interactivo, trenes, vuelos, autobuses y hoteles.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

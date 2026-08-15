@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Loader2, Link as LinkIcon, Menu, MessageSquare, Map as MapIcon, Calendar, ChevronDown, Bookmark, Sparkles, X, Share2, Check } from 'lucide-react';
+import { Send, Loader2, Link as LinkIcon, Menu, MessageSquare, Map as MapIcon, Calendar, ChevronDown, Bookmark, Sparkles, X, Share2, Check, Download, Wifi, WifiOff } from 'lucide-react';
 import { Message, TripPlan, UserPreferences, MapTarget } from './types';
 import { initChat, sendMessageToAgent, extractItineraryState, enrichTripPlanCoordinatesAsync, isAdkConfigured, initAdkSession, streamAdkQuery } from './services/aiService';
+import { generateItineraryPDF } from './services/pdfService';
 import { ChatMessage } from './components/ChatMessage';
 import { ItineraryView } from './components/ItineraryView';
 import { Sidebar, SavedTrip } from './components/Sidebar';
@@ -203,6 +204,28 @@ export default function App() {
     }, 3000);
   }, []);
 
+  // Offline Mode & Network State
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      triggerToast("🌐 Conexión a internet restablecida");
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      triggerToast("⚡ Modo Offline activado");
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [triggerToast]);
+
   const [preferences, setPreferences] = useState<UserPreferences>({
     originLocation: '',
     preferNightTrains: false,
@@ -214,6 +237,31 @@ export default function App() {
     tripType: 'RoundTrip',
     passengers: 1
   });
+
+  // Offline local persistence for active tripPlan
+  useEffect(() => {
+    if (tripPlan) {
+      try {
+        localStorage.setItem('itravel_active_trip_cache', JSON.stringify(tripPlan));
+      } catch (e) {}
+    }
+  }, [tripPlan]);
+
+  // Restore last cached trip plan on initial startup if offline or empty
+  useEffect(() => {
+    if (!tripPlan) {
+      try {
+        const cached = localStorage.getItem('itravel_active_trip_cache');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.options && parsed.options.length > 0) {
+            setTripPlan(parsed);
+            setSelectedOptionId(parsed.options[0].id);
+          }
+        }
+      } catch (e) {}
+    }
+  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -599,12 +647,21 @@ export default function App() {
       )}
 
       {/* FLOATING TOAST NOTIFICATION */}
+      {/* FLOATING TOAST NOTIFICATION */}
       {toastMessage && (
         <div className="fixed bottom-20 landscape:bottom-16 sm:bottom-6 right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-[600] bg-slate-900/95 text-white backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-emerald-500/50 shadow-2xl flex items-center gap-2.5 animate-fade-in text-xs font-bold">
           <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
             <Check size={13} />
           </div>
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* OFFLINE MODE BANNER */}
+      {isOffline && (
+        <div className="bg-amber-500/90 text-slate-950 font-extrabold text-[11px] py-1 px-3 text-center shadow-md flex items-center justify-center gap-1.5 z-50 shrink-0">
+          <WifiOff size={13} />
+          <span>⚡ Modo Offline activado — Puedes seguir consultando tus itinerarios y mapas guardados</span>
         </div>
       )}
 
@@ -648,7 +705,7 @@ export default function App() {
           </span>
         </div>
 
-        {/* Right: Segmented Workspace View Switcher */}
+        {/* Right: Segmented Workspace View Switcher & Actions */}
         <div className="flex items-center gap-1.5">
           <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 p-1 rounded-2xl flex items-center gap-1 shadow-lg">
             <button
@@ -690,6 +747,17 @@ export default function App() {
               )}
             </button>
           </div>
+
+          {tripPlan?.options && tripPlan.options.length > 0 && (
+            <button
+              onClick={() => generateItineraryPDF(tripPlan, selectedOptionId, preferences)}
+              className="p-2 sm:px-3 sm:py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all border border-slate-800 bg-teal-600/90 hover:bg-teal-500 text-white shadow-sm cursor-pointer"
+              title="Descargar itinerario completo en formato PDF"
+            >
+              <Download size={15} />
+              <span className="hidden xl:inline">PDF</span>
+            </button>
+          )}
 
           <button
             onClick={handleShareApp}

@@ -12,6 +12,8 @@
     "@google/genai": "latest",
     "@tailwindcss/postcss": "^4.3.3",
     "firebase": "^12.17.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "leaflet": "latest",
     "lucide-react": "latest",
     "react": "latest",

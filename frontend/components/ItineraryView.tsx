@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
-import { Map, Train, Bus, Plane, Ship, Footprints, Bed, Moon, MapPin, Info, AlertCircle, Coffee, Camera, Landmark, Clock, ExternalLink, ChevronDown, ChevronUp, Wallet, MessageSquarePlus, Bookmark, Trash2, Calendar, Navigation, Locate } from 'lucide-react';
-import { TripPlan, DayPlan, Transport, Accommodation, POI, ItineraryOption, MapTarget } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Map, Train, Bus, Plane, Ship, Footprints, Bed, Moon, MapPin, Info, AlertCircle, Coffee, Camera, Landmark, Clock, ExternalLink, ChevronDown, ChevronUp, Wallet, MessageSquarePlus, Bookmark, Trash2, Calendar, Navigation, Locate, Download } from 'lucide-react';
+import { TripPlan, DayPlan, Transport, Accommodation, POI, ItineraryOption, MapTarget, UserPreferences } from '../types';
 import { SavedTrip } from './Sidebar';
+import { generateItineraryPDF } from '../services/pdfService';
+import { fetchCityWeather, CityWeather } from '../services/weatherService';
 
 interface ItineraryViewProps {
   tripPlan: TripPlan | null;
   isUpdating: boolean;
   selectedOptionId: string | null;
+  preferences?: UserPreferences;
   onSelectOption: (id: string) => void;
   onAskCopilot?: (topic: string) => void;
   onFocusTarget?: (target: MapTarget) => void;
@@ -41,6 +44,7 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
   tripPlan, 
   isUpdating, 
   selectedOptionId, 
+  preferences,
   onSelectOption,
   onAskCopilot,
   onFocusTarget,
@@ -50,6 +54,29 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
   onSaveCurrentTrip
 }) => {
   const [activeTab, setActiveTab] = useState<'current' | 'saved'>('current');
+  const [weatherMap, setWeatherMap] = useState<Record<number, CityWeather>>({});
+
+  useEffect(() => {
+    let isMounted = true;
+    const selectedOption = tripPlan?.options?.find(o => o.id === selectedOptionId) || tripPlan?.options?.[0];
+    if (!selectedOption) return;
+
+    const loadWeather = async () => {
+      const newMap: Record<number, CityWeather> = {};
+      for (const day of selectedOption.days) {
+        if (day.coordinates) {
+          const w = await fetchCityWeather(day.coordinates.lat, day.coordinates.lng);
+          if (w) {
+            newMap[day.dayNumber] = w;
+          }
+        }
+      }
+      if (isMounted) setWeatherMap(newMap);
+    };
+
+    loadWeather();
+    return () => { isMounted = false; };
+  }, [tripPlan, selectedOptionId]);
 
   const handleAsk = (e: React.MouseEvent, topic: string) => {
     e.stopPropagation();
@@ -68,11 +95,11 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Sub-Header Tabs in Itinerary View */}
-      <div className="flex items-center justify-between border-b border-slate-800/80 bg-slate-900/80 rounded-2xl p-1.5 mb-2 shrink-0 text-white">
+      <div className="flex items-center justify-between border-b border-slate-800/80 bg-slate-900/80 rounded-2xl p-1.5 mb-2 shrink-0 text-white flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('current')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${activeTab === 'current' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800'}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${activeTab === 'current' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800'}`}
           >
             <Calendar size={14} />
             <span>Ruta Actual</span>
@@ -80,22 +107,35 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
           
           <button
             onClick={() => setActiveTab('saved')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors relative ${activeTab === 'saved' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800'}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors relative ${activeTab === 'saved' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800'}`}
           >
             <Bookmark size={14} />
             <span>Guardados ({savedTrips.length})</span>
           </button>
         </div>
 
-        {activeTab === 'current' && tripPlan?.options && tripPlan.options.length > 0 && onSaveCurrentTrip && (
-          <button
-            onClick={onSaveCurrentTrip}
-            className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95"
-            title="Guardar este viaje en tu historial"
-          >
-            <Bookmark size={13} />
-            <span className="hidden sm:inline">Guardar Viaje</span>
-          </button>
+        {activeTab === 'current' && tripPlan?.options && tripPlan.options.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => generateItineraryPDF(tripPlan, selectedOptionId, preferences || { originLocation: tripPlan.origin, preferNightTrains: false, budgetLevel: 'Standard', pace: 'Moderate', maxBudget: 1500 })}
+              className="flex items-center gap-1.5 text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
+              title="Descargar este itinerario en PDF"
+            >
+              <Download size={13} />
+              <span>Descargar PDF</span>
+            </button>
+
+            {onSaveCurrentTrip && (
+              <button
+                onClick={onSaveCurrentTrip}
+                className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
+                title="Guardar este viaje en tu historial"
+              >
+                <Bookmark size={13} />
+                <span className="hidden sm:inline">Guardar Viaje</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -310,6 +350,12 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                                       </h3>
 
                                       <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                        {weatherMap[day.dayNumber] && (
+                                          <div className="text-[11px] font-bold text-teal-300 bg-teal-950/80 border border-teal-500/30 px-2 py-1 rounded-xl flex items-center gap-1 shrink-0" title={weatherMap[day.dayNumber].condition}>
+                                            <span>{weatherMap[day.dayNumber].emoji}</span>
+                                            <span>{weatherMap[day.dayNumber].tempMax}° / {weatherMap[day.dayNumber].tempMin}°C</span>
+                                          </div>
+                                        )}
                                         {day.coordinates && onFocusTarget && (
                                           <button
                                             onClick={(e) => handleFocus(e, { lat: day.coordinates!.lat, lng: day.coordinates!.lng, zoom: 14.5, label: day.location })}

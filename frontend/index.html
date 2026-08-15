@@ -25,8 +25,29 @@
     <meta name="twitter:description" content="Planifica tus viajes paso a paso con IA: 3 opciones de itinerario, rutas en mapa interactivo, trenes, vuelos, autobuses y hoteles." />
     <meta name="twitter:image" content="https://i-travel-map.vercel.app/logo.png" />
 
+    <!-- PWA & Mobile Web App Config -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#020617">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/logo.png">
+
     <!-- Apple & Web Favicon -->
     <link rel="icon" type="image/png" href="/logo.png" />
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then((reg) => {
+            console.log('Service Worker registrado con éxito:', reg.scope);
+          }).catch((err) => {
+            console.warn('Error registrando Service Worker:', err);
+          });
+        });
+      }
+    </script>
     <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6350264370547424" crossorigin="anonymous"></script>
     
