@@ -558,43 +558,20 @@ export default function App() {
     }
 
     const shareTitle = 'iTRAVEL_MAP 🗺️ - Tu Copiloto de Viajes con IA';
-    const shareText = `Explora esta ruta de viaje en iTRAVEL_MAP: ${tripPlan?.origin || 'Origen'} → ${tripPlan?.options?.[0]?.title || 'Destino'}`;
+    const shareText = `Planifica tus viajes paso a paso con iTRAVEL_MAP: ${tripPlan?.origin || 'Origen'} → ${tripPlan?.options?.[0]?.title || 'Destino'}`;
 
     if (navigator.share) {
       try {
-        let logoFile: File | null = null;
-        try {
-          const res = await fetch('/logo.png');
-          const blob = await res.blob();
-          logoFile = new File([blob], 'iTRAVEL_MAP_Logo.png', { type: 'image/png' });
-        } catch (e) {}
-
-        const shareData: ShareData = {
+        await navigator.share({
           title: shareTitle,
           text: shareText,
           url: shareUrl
-        };
-
-        if (logoFile && navigator.canShare && navigator.canShare({ files: [logoFile] })) {
-          shareData.files = [logoFile];
-        }
-
-        await navigator.share(shareData);
-        triggerToast("¡Ruta compartida con éxito!");
+        });
+        triggerToast("¡Enlace compartido!");
         return;
       } catch (err) {
-        // User cancelled or fallback to clipboard
+        // User cancelled share dialog
       }
-    }
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        setIsCopied(true);
-        triggerToast("¡Enlace copiado!");
-        setTimeout(() => setIsCopied(false), 2500);
-        return;
-      } catch (err) {}
     }
 
     setIsCopied(true);
