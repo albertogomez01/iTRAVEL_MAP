@@ -557,6 +557,36 @@ export default function App() {
       }
     }
 
+    const shareTitle = 'iTRAVEL_MAP 🗺️ - Tu Copiloto de Viajes con IA';
+    const shareText = `Explora esta ruta de viaje en iTRAVEL_MAP: ${tripPlan?.origin || 'Origen'} → ${tripPlan?.options?.[0]?.title || 'Destino'}`;
+
+    if (navigator.share) {
+      try {
+        let logoFile: File | null = null;
+        try {
+          const res = await fetch('/logo.png');
+          const blob = await res.blob();
+          logoFile = new File([blob], 'iTRAVEL_MAP_Logo.png', { type: 'image/png' });
+        } catch (e) {}
+
+        const shareData: ShareData = {
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl
+        };
+
+        if (logoFile && navigator.canShare && navigator.canShare({ files: [logoFile] })) {
+          shareData.files = [logoFile];
+        }
+
+        await navigator.share(shareData);
+        triggerToast("¡Ruta compartida con éxito!");
+        return;
+      } catch (err) {
+        // User cancelled or fallback to clipboard
+      }
+    }
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
       try {
         await navigator.clipboard.writeText(shareUrl);
@@ -567,20 +597,9 @@ export default function App() {
       } catch (err) {}
     }
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'iTRAVEL_MAP - Ruta de Viaje Compartida',
-          text: `Explora esta ruta de viaje en iTRAVEL_MAP: ${tripPlan?.origin || 'Origen'} → ${tripPlan?.options?.[0]?.title || 'Destino'}`,
-          url: shareUrl
-        });
-        triggerToast("¡Ruta compartida!");
-      } catch (err) {}
-    } else {
-      setIsCopied(true);
-      triggerToast("¡Enlace copiado!");
-      setTimeout(() => setIsCopied(false), 2500);
-    }
+    setIsCopied(true);
+    triggerToast("¡Enlace copiado!");
+    setTimeout(() => setIsCopied(false), 2500);
   };
 
   const selectedOption = tripPlan?.options?.find(o => o.id === selectedOptionId) || tripPlan?.options?.[0] || null;
