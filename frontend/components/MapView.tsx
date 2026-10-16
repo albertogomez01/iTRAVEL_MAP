@@ -25,15 +25,17 @@ const getDayIcon = (dayNumber: number) => {
   return iconCache.get(key)!;
 };
 
-const getHotelIcon = (name: string) => {
-  const key = `hotel-${name}`;
+const getHotelIcon = (name: string, pricePerNight?: number, rating?: number) => {
+  const priceTag = pricePerNight ? ` • <strong style="color: #6ee7b7; font-weight: 700;">${pricePerNight}€/noche</strong>` : '';
+  const ratingTag = rating ? ` • <span style="background: rgba(255,255,255,0.25); padding: 1px 4px; border-radius: 4px; font-size: 10px; font-weight: bold;">⭐${rating}</span>` : '';
+  const key = `hotel-${name}-${pricePerNight || 0}-${rating || 0}`;
   if (!iconCache.has(key)) {
     iconCache.set(key, L.divIcon({
       className: 'custom-hotel-icon',
-      html: `<div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border-radius: 10px; padding: 4px 8px; display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 11px; border: 2px solid white; box-shadow: 0 4px 12px rgba(79,70,229,0.4); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">🏨 ${name}</div>`,
-      iconSize: [130, 26],
-      iconAnchor: [65, 13],
-      popupAnchor: [0, -13]
+      html: `<div style="background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color: white; border-radius: 12px; padding: 4px 9px; display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 11px; border: 2px solid white; box-shadow: 0 4px 14px rgba(79,70,229,0.5); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;">🏨 <span style="overflow: hidden; text-overflow: ellipsis; max-width: 85px;">${name}</span>${priceTag}${ratingTag}</div>`,
+      iconSize: [160, 28],
+      iconAnchor: [80, 14],
+      popupAnchor: [0, -14]
     }));
   }
   return iconCache.get(key)!;
@@ -681,7 +683,7 @@ export const MapView: React.FC<MapViewProps> = ({
           </Marker>
         ))}
 
-        {/* 4. Hotel / Accommodation Markers */}
+        {/* 4. Hotel / Accommodation Markers con Precio y Valoración */}
         {showHotels && validDays.map((day, idx) => {
           if (!day.accommodation?.coordinates) return null;
           const acc = day.accommodation;
@@ -689,34 +691,70 @@ export const MapView: React.FC<MapViewProps> = ({
             <Marker
               key={`hotel-marker-${idx}-${day.dayNumber}`}
               position={[acc.coordinates.lat, acc.coordinates.lng]}
-              icon={getHotelIcon(acc.name)}
+              icon={getHotelIcon(acc.name, acc.pricePerNight, acc.rating)}
             >
-              <Popup className="rounded-2xl">
+              <Popup className="rounded-2xl min-w-[260px] max-w-[320px]">
                 <GlassPopup>
-                  <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                    <Bed size={12} /> Hotel Recomendado (Día {day.dayNumber})
-                  </div>
-                  <strong className="text-slate-900 text-sm font-bold block mb-1">{acc.name}</strong>
-                  <span className="text-xs text-slate-600 block mb-1">{acc.location}</span>
-                  {acc.notes && <p className="text-xs text-slate-500 italic border-t border-slate-100 pt-1 mt-1 mb-2">{acc.notes}</p>}
-                  
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => setInternalTarget({ lat: acc.coordinates!.lat, lng: acc.coordinates!.lng, zoom: 16 })}
-                      className="flex-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-                    >
-                      <ZoomIn size={12} />
-                      <span>Zoom Hotel</span>
-                    </button>
-                    {onAskCopilot && (
-                      <button
-                        onClick={() => onAskCopilot(`el hotel ${acc.name} en ${day.location}`)}
-                        className="flex-1 text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-                      >
-                        <MessageSquarePlus size={12} />
-                        <span>Preguntar</span>
-                      </button>
+                  <div className="flex items-center justify-between gap-1 mb-1 border-b border-slate-100 pb-1.5">
+                    <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1">
+                      <Bed size={12} /> Hotel Seleccionado (Día {day.dayNumber})
+                    </div>
+                    {acc.rating && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5 ${acc.rating >= 8.5 ? 'bg-emerald-100 text-emerald-800' : 'bg-teal-100 text-teal-800'}`}>
+                        ⭐ {acc.rating}/10 {acc.rating >= 8.5 ? 'Excelente' : 'Muy bueno'}
+                      </span>
                     )}
+                  </div>
+
+                  <strong className="text-slate-900 text-sm font-bold block mb-1">{acc.name}</strong>
+                  <span className="text-xs text-slate-600 block mb-1.5">{acc.location}</span>
+
+                  {(acc.pricePerNight || acc.totalPrice) && (
+                    <div className="bg-indigo-50/80 border border-indigo-100 rounded-xl p-2 mb-2 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Precio / noche</span>
+                        <span className="text-sm font-bold text-indigo-700">{acc.pricePerNight || Math.round((acc.totalPrice || 0) / 1)} € / noche</span>
+                      </div>
+                      {acc.totalPrice && (
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-500 block">Total estancia</span>
+                          <span className="text-xs font-bold text-slate-800">{acc.totalPrice} €</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {acc.notes && <p className="text-xs text-slate-500 italic mb-2">{acc.notes}</p>}
+                  
+                  <div className="flex flex-col gap-1.5 pt-1 border-t border-slate-100">
+                    {acc.bookingUrl && (
+                      <a
+                        href={acc.bookingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full text-[11px] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm text-center mb-1 cursor-pointer"
+                      >
+                        <span>🏨 Reservar en Booking.com</span>
+                      </a>
+                    )}
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setInternalTarget({ lat: acc.coordinates!.lat, lng: acc.coordinates!.lng, zoom: 16 })}
+                        className="flex-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                      >
+                        <ZoomIn size={12} />
+                        <span>Zoom Hotel</span>
+                      </button>
+                      {onAskCopilot && (
+                        <button
+                          onClick={() => onAskCopilot(`el hotel ${acc.name} en ${day.location}`)}
+                          className="flex-1 text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          <MessageSquarePlus size={12} />
+                          <span>Preguntar</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </GlassPopup>
               </Popup>

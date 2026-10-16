@@ -367,14 +367,18 @@ export default function App() {
     }
   }, [messages, isChatOpen]);
 
-  const handleSendMessage = useCallback(async () => {
-    if (!inputValue.trim() || isLoading || !isInitialized) return;
+  const handleSendMessage = useCallback(async (overridePrompt?: string) => {
+    const textToSend = (typeof overridePrompt === 'string' ? overridePrompt : inputValue).trim();
+    if (!textToSend || isLoading || !isInitialized) return;
 
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', text: inputValue };
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', text: textToSend };
     setMessages(prev => [...prev, userMsg]);
-    setInputValue('');
+    if (typeof overridePrompt !== 'string') {
+      setInputValue('');
+    }
     setIsLoading(true);
     setIsChatOpen(true);
+    setIsItineraryOpen(false);
 
     try {
       if (useAdk && sessionId) {
@@ -420,7 +424,20 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [inputValue, isLoading, isInitialized, sessionId, userId, messages, useAdk]);
+  }, [inputValue, isLoading, isInitialized, sessionId, userId, messages, useAdk, preferences]);
+
+  const handleQuickDealSearch = useCallback((params: {
+    origin: string;
+    destination: string;
+    dateRangeStart: string;
+    dateRangeEnd: string;
+    durationDays: number;
+    passengers: number;
+  }) => {
+    const passengersText = params.passengers > 1 ? `${params.passengers} personas` : '1 persona';
+    const dealPrompt = `⚡ **Búsqueda 1-Click activada**: Búscame la mejor combinación de viaje de ${params.origin} a ${params.destination} para estar ${params.durationDays} días entre el ${params.dateRangeStart} y el ${params.dateRangeEnd} para ${passengersText}. Evalúa la opción de vuelo más barata dentro de la horquilla y selecciona hoteles con nota mínima obligatoria de 7.0/10.`;
+    handleSendMessage(dealPrompt);
+  }, [handleSendMessage]);
 
   const updateItineraryState = async (currentMessages: Message[]) => {
     setIsUpdatingItinerary(true);
@@ -811,6 +828,7 @@ export default function App() {
           onDeleteTrip={handleDeleteTrip}
           onSaveCurrentTrip={handleSaveCurrentTrip}
           onOpenLegalModal={handleOpenLegalModal}
+          onQuickDealSearch={handleQuickDealSearch}
         />
 
         {/* MAP VIEW CONTAINER */}

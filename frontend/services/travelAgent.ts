@@ -12,10 +12,85 @@ import {
   createTripPlanFromCitiesAsync, 
   enrichTripPlanCoordinatesAsync 
 } from './aiService';
+import { 
+  searchFlightDeals, 
+  searchAccommodations, 
+  executeOneClickTravelOptimization 
+} from './dealsService';
 
 // ============================================================================
 // 1. HERRAMIENTAS DEL AGENTE (Function Declarations para Gemini)
 // ============================================================================
+
+const searchFlightDealsToolDeclaration: FunctionDeclaration = {
+  name: 'searchFlightDeals',
+  description: 'Busca y compara ofertas de vuelos de ida y vuelta dentro de una horquilla de fechas flexible (ej. 4 días entre el 10 y el 20 de mayo). Evalúa todas las combinaciones de fechas posibles y devuelve la combinación más económica junto a las alternativas, con precio exacto, aerolínea, fechas y horarios de ida/vuelta.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      origin: {
+        type: Type.STRING,
+        description: 'Ciudad de origen o código IATA (ej. Alicante, ALC, Madrid, MAD, Barcelona, BCN).'
+      },
+      destination: {
+        type: Type.STRING,
+        description: 'Ciudad de destino o código IATA (ej. Londres, LON, París, CDG, Roma, FCO).'
+      },
+      dateRangeStart: {
+        type: Type.STRING,
+        description: 'Fecha de inicio de la horquilla flexible en formato YYYY-MM-DD (ej. 2026-05-10).'
+      },
+      dateRangeEnd: {
+        type: Type.STRING,
+        description: 'Fecha de fin de la horquilla flexible en formato YYYY-MM-DD (ej. 2026-05-20).'
+      },
+      durationDays: {
+        type: Type.INTEGER,
+        description: 'Número exacto de días de estancia deseados (ej. 4).'
+      },
+      passengers: {
+        type: Type.INTEGER,
+        description: 'Número de viajeros o pasajeros (por defecto 1).'
+      }
+    },
+    required: ['origin', 'destination', 'dateRangeStart', 'dateRangeEnd', 'durationDays']
+  }
+};
+
+const searchAccommodationsToolDeclaration: FunctionDeclaration = {
+  name: 'searchAccommodations',
+  description: 'Busca y filtra alojamientos y hoteles en la ciudad de destino para las fechas exactas ganadoras del vuelo, aplicando un filtro estricto de reputación: nota mínima obligatoria >= 7.0 sobre 10 (o 70%). Devuelve hoteles ordenados por mejor precio con name, rating (validado >= 7.0), pricePerNight, totalPrice, coordinates [lat, lng] y bookingUrl.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      destinationCity: {
+        type: Type.STRING,
+        description: 'Ciudad de destino donde buscar alojamiento (ej. Londres, París, Roma).'
+      },
+      checkIn: {
+        type: Type.STRING,
+        description: 'Fecha de entrada (check-in) en formato YYYY-MM-DD.'
+      },
+      checkOut: {
+        type: Type.STRING,
+        description: 'Fecha de salida (check-out) en formato YYYY-MM-DD.'
+      },
+      maxBudgetPerNight: {
+        type: Type.NUMBER,
+        description: 'Presupuesto máximo por noche en euros (opcional).'
+      },
+      minRating: {
+        type: Type.NUMBER,
+        description: 'Nota mínima de reputación sobre 10 (por defecto 7.0. NUNCA inferior a 7.0).'
+      },
+      passengers: {
+        type: Type.INTEGER,
+        description: 'Número de huéspedes (por defecto 1).'
+      }
+    },
+    required: ['destinationCity', 'checkIn', 'checkOut']
+  }
+};
 
 const weatherToolDeclaration: FunctionDeclaration = {
   name: 'getWeatherForecast',
@@ -81,6 +156,8 @@ const bookingLinksToolDeclaration: FunctionDeclaration = {
 const agentTools = [
   {
     functionDeclarations: [
+      searchFlightDealsToolDeclaration,
+      searchAccommodationsToolDeclaration,
       weatherToolDeclaration,
       routeCalculatorToolDeclaration,
       bookingLinksToolDeclaration
@@ -355,24 +432,37 @@ export const runTravelAgent = async (
   const isFollowUp = formattedHistory.length > 0;
 
   const agentSystemInstruction = `
-Eres el AGENTE INTELIGENTE AUTÓNOMO DE VIAJES iTRAVEL_MAP.
-Tu función es planificar viajes increíbles, asesorar al usuario con datos reales, horarios y precios, y generar itinerarios multimodales sincronizados con el mapa interactivo.
+Eres el AGENTE INTELIGENTE AUTÓNOMO DE VIAJES "1-CLICK" de iTRAVEL_MAP.
+Tu misión principal es actuar como un optimizador de viajes real que encuentra la MEJOR COMBINACIÓN DE VUELO + HOTEL con datos exactos, precios reales y máxima satisfacción de viaje.
 
 DISPONES DE HERRAMIENTAS REALES PARA EJECUTAR:
-1. 'getWeatherForecast': Consulta el clima real antes de recomendar ropa o actividades.
-2. 'calculateRouteTransport': Calcula distancias exactas y opciones óptimas de tren, bus y avión.
-3. 'generateBookingLinks': Proporciona enlaces directos a Google Flights, Skyscanner, Booking.com, Omio y TheTrainline.
+1. 'searchFlightDeals': Evalúa todas las combinaciones dentro de una horquilla de fechas flexible (ej. 4 días entre el 10 y el 20 de mayo), calcula precios reales por aerolínea y fecha, y selecciona la combinación ganadora más barata.
+2. 'searchAccommodations': Busca hoteles en la ciudad de destino para las fechas exactas del vuelo aplicando un FILTRO ESTRICTO DE REPUTACIÓN: nota mínima obligatoria >= 7.0 sobre 10 (o 70%), ordenados por mejor precio con coordenadas exactas y enlaces a Booking.com.
+3. 'getWeatherForecast': Consulta el pronóstico meteorológico real para las fechas del viaje.
+4. 'calculateRouteTransport': Calcula distancias y opciones óptimas de tren, autobús o avión.
+5. 'generateBookingLinks': Genera enlaces oficiales y directos a Google Flights, Skyscanner, Booking.com y Omio.
+
+PROTOCOLO OBLIGATORIO DE RESPUESTA EN CADENA (FLUJO 1-CLICK):
+Cuando el usuario pida buscar vuelos con fechas flexibles, encontrar la mejor oferta de viaje, o use el botón 1-Click:
+- PASO 1 (HERRAMIENTA): Invoca INMEDIATAMENTE 'searchFlightDeals' con el origen, destino, horquilla de fechas (dateRangeStart, dateRangeEnd) y días de estancia (durationDays).
+- PASO 2 (HERRAMIENTA): Tras recibir la combinación ganadora más barata del vuelo, invoca 'searchAccommodations' para las fechas exactas de salida (checkIn) y regreso (checkOut) con minRating >= 7.0.
+- PASO 3 (PRESENTACIÓN): Estructura tu respuesta final con total transparencia, motivación y claridad visual:
+  * 🎯 **La Mejor Combinación Encontrada (Ganadora)**:
+    - ✈️ **Vuelo de Ida y Vuelta**: Fechas exactas, aerolínea, horario de ida (aprovechando la mañana), horario de vuelta (aprovechando la tarde/noche), precio exacto por persona y enlace: [✈️ Ver Vuelos en Google Flights](url).
+    - 🏨 **Alojamiento Recomendado (Nota >= 7.0 / 10)**: Nombre del hotel, valoración certificada (ej. ⭐ 8.4/10 Fabuloso), precio por noche, total de la estancia, ubicación céntrica y enlace: [🏨 Reservar Hotel en Booking.com](url).
+    - 💶 **Desglose Económico Transparente**:
+      • Vuelo ida/vuelta: X € / persona (Total grupo: X €)
+      • Alojamiento (N noches): Y € total estancia
+      • **PRECIO TOTAL COMBINADO: Z € por persona (Total viaje: Z €)**
+    - 📅 **Comparativa de la Horquilla**: Breve tabla o resumen comparativo con las otras fechas alternativas evaluadas y sus diferencias de precio.
+- PASO 4 (SINCRONIZACIÓN MAPA LEAFLET):
+  Al final de tu respuesta, en la ÚLTIMA LÍNEA OBLIGATORIA, emite el bloque JSON con las ciudades, el vuelo y los hoteles con sus coordenadas para pintarlos en el mapa:
+  {"cities": ["CiudadOrigen", "CiudadDestino"], "hotels": [{"name": "Nombre Hotel", "rating": 8.4, "pricePerNight": 76, "totalPrice": 304, "coordinates": {"lat": 51.5225, "lng": -0.0818}, "bookingUrl": "url"}], "flight": {"from": "CiudadOrigen", "to": "CiudadDestino", "airline": "Aerolinea", "departureDate": "YYYY-MM-DD", "returnDate": "YYYY-MM-DD", "price": 48}}
 
 REGLAS DE ACTUACIÓN:
 - Idioma: Español de España (es-ES).
-- Tono: Experto, motivador, muy organizado y visual (usa negritas, listas y emojis 🏨, 🚆, ✈️, 🌤️, 📍).
-- **CONTINUIDAD CONVERSACIONAL TOTAL (MEMORIA CRÍTICA)**:
-  - Lee SIEMPRE el historial de mensajes anteriores de la conversación.
-  - Recuerda en todo momento el origen, destino, fechas, número de personas y condiciones ya acordadas (por ejemplo: si el usuario ya dijo "de Alicante a Londres para 2 estudiantes 4 días", JAMÁS vuelvas a preguntar "¿desde qué ciudad deseas salir?", "¿a dónde quieres ir?", "¿cuántos sois?" o "¿en qué fechas?").
-  - Si el usuario dice "búscame los vuelos más baratos con las condiciones dadas", analiza directamente los vuelos para la ruta, fechas y viajeros establecidos previamente, proporcionando combinaciones de aerolíneas reales (ej. Ryanair, easyJet, Vueling), horarios recomendados (ida temprano, vuelta tarde) y enlaces de reserva.
-- Enlaces markdown: Pon siempre enlaces funcionales en el formato [✈️ Google Flights](url), [✈️ Skyscanner](url) o [🏨 Booking](url).
-- **SINCRONIZACIÓN CON EL MAPA**: Al final de tu respuesta, si recomiendas un viaje o mencionas una ruta de ciudades en orden de visita, añade OBLIGATORIAMENTE en la última línea el bloque JSON:
-{"cities": ["Ciudad1", "Ciudad2", ...]}
+- Tono: Experto, resolutivo, estructurado y alegre (usa negritas, listas y emojis ✈️, 🏨, 💶, ⭐, 📍).
+- **CONTINUIDAD CONVERSACIONAL TOTAL**: No repitas preguntas sobre origen, fechas o número de personas si ya están en el historial o en el mensaje.
 `;
 
   const toolsUsed: string[] = [];
@@ -401,9 +491,9 @@ REGLAS DE ACTUACIÓN:
 
       let currentResponse = await chat.sendMessage({ message: promptToSend });
 
-      // Bucle de ejecución de herramientas (hasta 3 rondas)
+      // Bucle de ejecución de herramientas (hasta 4 rondas para soportar la cadena Vuelo -> Hotel)
       let turnCount = 0;
-      while (currentResponse.functionCalls && currentResponse.functionCalls.length > 0 && turnCount < 3) {
+      while (currentResponse.functionCalls && currentResponse.functionCalls.length > 0 && turnCount < 4) {
         turnCount++;
         const functionResponses: any[] = [];
 
@@ -411,7 +501,11 @@ REGLAS DE ACTUACIÓN:
           toolsUsed.push(call.name);
           let toolResult: any = {};
 
-          if (call.name === 'getWeatherForecast') {
+          if (call.name === 'searchFlightDeals') {
+            toolResult = await searchFlightDeals(call.args as any);
+          } else if (call.name === 'searchAccommodations') {
+            toolResult = await searchAccommodations(call.args as any);
+          } else if (call.name === 'getWeatherForecast') {
             toolResult = await executeWeatherForecast(call.args as any);
           } else if (call.name === 'calculateRouteTransport') {
             toolResult = await executeRouteTransport(call.args as any);
@@ -450,10 +544,13 @@ REGLAS DE ACTUACIÓN:
     throw new Error(lastError?.message || "No se pudo obtener respuesta del Agente de Viajes.");
   }
 
-  // Extracción de ciudades para sincronizar con el mapa Leaflet
+  // Extracción de datos de sincronización para el mapa Leaflet (ciudades, hoteles y vuelo)
   let extractedCities: string[] = [];
-  const citiesJsonRegex = /(?:```(?:json)?\s*)?\{\s*"cities"\s*:\s*\[([\s\S]*?)\]\s*\}(?:\s*```)?/i;
-  const match = finalResponseText.match(citiesJsonRegex);
+  let extractedHotels: any[] = [];
+  let extractedFlight: any = null;
+
+  const syncJsonRegex = /(?:```(?:json)?\s*)?\{\s*"(?:cities|flight|hotels)"[\s\S]*?\}(?:\s*```)?/i;
+  const match = finalResponseText.match(syncJsonRegex);
   if (match) {
     try {
       const jsonStr = match[0].replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
@@ -461,17 +558,47 @@ REGLAS DE ACTUACIÓN:
       if (Array.isArray(parsed?.cities)) {
         extractedCities = parsed.cities;
       }
+      if (Array.isArray(parsed?.hotels)) {
+        extractedHotels = parsed.hotels;
+      }
+      if (parsed?.flight) {
+        extractedFlight = parsed.flight;
+      }
     } catch (e) {
-      console.warn("No se pudo parsear el bloque de ciudades del Agente:", e);
+      console.warn("No se pudo parsear el bloque de sincronización del Agente:", e);
+    }
+  }
+
+  // Fallback para regex clásica de solo cities si no coincidió el objeto compuesto
+  if (extractedCities.length === 0) {
+    const citiesJsonRegex = /(?:```(?:json)?\s*)?\{\s*"cities"\s*:\s*\[([\s\S]*?)\]\s*\}(?:\s*```)?/i;
+    const matchSimple = finalResponseText.match(citiesJsonRegex);
+    if (matchSimple) {
+      try {
+        const jsonStr = matchSimple[0].replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        const parsed = JSON.parse(jsonStr);
+        if (Array.isArray(parsed?.cities)) {
+          extractedCities = parsed.cities;
+        }
+      } catch (e) {
+        console.warn("No se pudo parsear el bloque de ciudades del Agente:", e);
+      }
     }
   }
 
   // Limpiar el bloque JSON del texto para no mostrárselo en crudo al usuario
-  const cleanedText = finalResponseText.replace(/(?:```(?:json)?\s*)?\{\s*"cities"\s*:\s*\[[\s\S]*?\]\s*\}(?:\s*```)?/gi, '').trim();
+  const cleanedText = finalResponseText
+    .replace(/(?:```(?:json)?\s*)?\{\s*"(?:cities|flight|hotels)"[\s\S]*?\}(?:\s*```)?/gi, '')
+    .trim();
 
   let returnedTripPlan: TripPlan | undefined;
   if (extractedCities.length > 0) {
-    returnedTripPlan = (await createTripPlanFromCitiesAsync(extractedCities, preferences)) || undefined;
+    returnedTripPlan = (await createTripPlanFromCitiesAsync(
+      extractedCities, 
+      preferences, 
+      extractedHotels, 
+      extractedFlight
+    )) || undefined;
   }
 
   return {

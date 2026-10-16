@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Moon, Sun, Wallet, Activity, Loader2, Calendar, Banknote, MapPin, X, Check, RotateCcw, Bookmark, Trash2, Navigation, Users } from 'lucide-react';
+import { Settings, Moon, Sun, Wallet, Activity, Loader2, Calendar, Banknote, MapPin, X, Check, RotateCcw, Bookmark, Trash2, Navigation, Users, Zap, Sparkles, Plane } from 'lucide-react';
 import { UserPreferences } from '../types';
 import { CityAutocompleteInput } from './CityAutocompleteInput';
 
@@ -32,6 +32,14 @@ interface SidebarProps {
   onDeleteTrip?: (tripId: string) => void;
   onSaveCurrentTrip?: () => void;
   onOpenLegalModal?: (tab: 'about' | 'privacy' | 'terms') => void;
+  onQuickDealSearch?: (params: {
+    origin: string;
+    destination: string;
+    dateRangeStart: string;
+    dateRangeEnd: string;
+    durationDays: number;
+    passengers: number;
+  }) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -47,7 +55,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLoadTrip,
   onDeleteTrip,
   onSaveCurrentTrip,
-  onOpenLegalModal
+  onOpenLegalModal,
+  onQuickDealSearch
 }) => {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [showUndoConfirmModal, setShowUndoConfirmModal] = useState(false);
@@ -57,6 +66,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Draft preferences for user edits before clicking "Aplicar"
   const [draftPrefs, setDraftPrefs] = useState<UserPreferences>({ ...preferences });
+
+  const getFlexibleStartDefault = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    return d.toISOString().split('T')[0];
+  };
+
+  const getFlexibleEndDefault = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 28);
+    return d.toISOString().split('T')[0];
+  };
+
+  const [flexStart, setFlexStart] = useState<string>(() => preferences.flexibleRangeStart || getFlexibleStartDefault());
+  const [flexEnd, setFlexEnd] = useState<string>(() => preferences.flexibleRangeEnd || getFlexibleEndDefault());
+  const [flexDuration, setFlexDuration] = useState<number>(() => preferences.flexibleDurationDays || 4);
+  const [isFlexibleSectionOpen, setIsFlexibleSectionOpen] = useState<boolean>(true);
 
   const getTodayString = () => {
     const d = new Date();
@@ -91,6 +117,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (onApplyPreferences) {
       onApplyPreferences(draftPrefs);
     }
+    if (onCloseMobile) onCloseMobile();
+  };
+
+  const handleQuickDealSearchClick = () => {
+    const origin = draftPrefs.originLocation?.trim() || 'Alicante';
+    const destination = draftPrefs.destinationLocation?.trim() || 'Londres';
+    const start = flexStart || getFlexibleStartDefault();
+    const end = flexEnd || getFlexibleEndDefault();
+    const duration = flexDuration || 4;
+    const passengers = draftPrefs.passengers || 1;
+
+    const updatedPrefs: UserPreferences = {
+      ...draftPrefs,
+      originLocation: origin,
+      destinationLocation: destination,
+      isFlexibleDates: true,
+      flexibleRangeStart: start,
+      flexibleRangeEnd: end,
+      flexibleDurationDays: duration
+    };
+    setDraftPrefs(updatedPrefs);
+    setPreferences(updatedPrefs);
+
+    if (onQuickDealSearch) {
+      onQuickDealSearch({
+        origin,
+        destination,
+        dateRangeStart: start,
+        dateRangeEnd: end,
+        durationDays: duration,
+        passengers
+      });
+    }
+
     if (onCloseMobile) onCloseMobile();
   };
 
@@ -182,11 +242,99 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div>
               <CityAutocompleteInput
                 label="Ciudad de Origen"
-                placeholder="Ej. Madrid, España"
+                placeholder="Ej. Alicante, España"
                 value={draftPrefs.originLocation || ''}
                 onChange={(val) => setDraftPrefs(prev => ({ ...prev, originLocation: val }))}
                 iconColor="text-red-400"
               />
+            </div>
+
+            {/* Destino del Viaje con Autocompletado */}
+            <div>
+              <CityAutocompleteInput
+                label="Ciudad de Destino"
+                placeholder="Ej. Londres, Reino Unido"
+                value={draftPrefs.destinationLocation || ''}
+                onChange={(val) => setDraftPrefs(prev => ({ ...prev, destinationLocation: val }))}
+                iconColor="text-emerald-400"
+              />
+            </div>
+
+            {/* MÓDULO 1-CLICK: HORQUILLA FLEXIBLE + HOTEL > 7.0 */}
+            <div className="bg-gradient-to-br from-indigo-950/70 via-slate-900 to-slate-900 border border-indigo-500/40 rounded-2xl p-3.5 space-y-3 shadow-lg shadow-indigo-950/40 relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-xs font-bold text-white flex items-center gap-1">
+                    <Zap size={14} className="text-amber-400" /> Asistente 1-Click
+                  </span>
+                </div>
+                <span className="text-[10px] font-semibold text-indigo-300 bg-indigo-950/90 px-2 py-0.5 rounded-full border border-indigo-500/40">
+                  Hotel ⭐ &ge; 7.0 / 10
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-slate-300 flex items-center gap-1">
+                    <Calendar size={12} className="text-indigo-400" /> Horquilla Flexible:
+                  </span>
+                  <span className="text-[10px] text-indigo-300 font-semibold bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-800/40">
+                    {flexDuration} días estancia
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mb-0.5">Ventana Desde:</span>
+                    <input
+                      type="date"
+                      min={getTodayString()}
+                      value={flexStart}
+                      onChange={(e) => setFlexStart(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 text-[11px] rounded-xl px-2 py-1.5 text-white focus:outline-none focus:border-indigo-500 [color-scheme:dark]"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mb-0.5">Ventana Hasta:</span>
+                    <input
+                      type="date"
+                      min={flexStart || getTodayString()}
+                      value={flexEnd}
+                      onChange={(e) => setFlexEnd(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 text-[11px] rounded-xl px-2 py-1.5 text-white focus:outline-none focus:border-indigo-500 [color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+
+                {/* Selector rápido de estancia */}
+                <div className="pt-1">
+                  <span className="text-[10px] text-slate-400 block mb-1">Días de estancia:</span>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[3, 4, 5, 7].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setFlexDuration(num)}
+                        className={`py-1 rounded-lg text-[11px] font-semibold transition-all border ${flexDuration === num ? 'bg-indigo-600 text-white border-indigo-400 shadow-sm' : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'}`}
+                      >
+                        {num} días
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* BOTÓN 1-CLIC */}
+              <button
+                type="button"
+                onClick={handleQuickDealSearchClick}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-white text-xs font-bold rounded-xl shadow-lg shadow-orange-500/25 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer group"
+                title="Buscar automáticamente la combinación ganadora de vuelo más barata y hotel con nota >= 7"
+              >
+                <Sparkles size={14} className="text-amber-200 group-hover:rotate-12 transition-transform" />
+                <span>Buscar mejor combinación (Hotel &gt;7/10)</span>
+              </button>
             </div>
 
             {/* Fechas del Viaje */}

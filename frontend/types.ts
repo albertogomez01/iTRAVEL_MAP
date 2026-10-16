@@ -24,6 +24,10 @@ export interface Accommodation {
   name: string;
   location: string;
   notes?: string;
+  rating?: number;
+  pricePerNight?: number;
+  totalPrice?: number;
+  bookingUrl?: string;
   coordinates?: {
     lat: number;
     lng: number;
@@ -93,12 +97,74 @@ export interface Message {
 
 export interface UserPreferences {
   originLocation?: string;
+  destinationLocation?: string;
   preferNightTrains: boolean;
   budgetLevel: 'Budget' | 'Standard' | 'Luxury';
   pace: 'Relaxed' | 'Moderate' | 'Fast';
   startDate?: string;
   endDate?: string;
+  isFlexibleDates?: boolean;
+  flexibleRangeStart?: string;
+  flexibleRangeEnd?: string;
+  flexibleDurationDays?: number;
   maxBudget: number;
   tripType?: 'RoundTrip' | 'OneWay';
   passengers?: number;
 }
+
+export interface FlightDeal {
+  id: string;
+  origin: string;
+  originIata: string;
+  destination: string;
+  destinationIata: string;
+  departureDate: string;
+  returnDate: string;
+  departureTime: string;
+  arrivalTime: string;
+  returnDepartureTime: string;
+  returnArrivalTime: string;
+  airline: string;
+  flightNumberOut?: string;
+  flightNumberReturn?: string;
+  pricePerPerson: number;
+  totalPrice: number;
+  durationHours: string;
+  isDirect: boolean;
+  bookingUrl: string;
+}
+
+export interface HotelDeal {
+  id: string;
+  name: string;
+  city: string;
+  rating: number; // e.g. 7.0 - 10.0 (strictly >= 7.0)
+  reviewScoreWord?: string; // e.g. "Excelente", "Muy bueno"
+  stars?: number;
+  pricePerNight: number;
+  totalPrice: number;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  address: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+  bookingUrl: string;
+  amenities?: string[];
+  imageUrl?: string;
+}
+
+export interface FlexibleDealSearchResult {
+  origin: string;
+  destination: string;
+  durationDays: number;
+  dateRangeStart: string;
+  dateRangeEnd: string;
+  winningFlight: FlightDeal;
+  evaluatedFlights: FlightDeal[];
+  winningHotels: HotelDeal[];
+  summary: string;
+}
+

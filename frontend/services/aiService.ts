@@ -712,7 +712,9 @@ export const enrichTripPlanCoordinatesAsync = async (plan: TripPlan, preferences
 
 export const createTripPlanFromCitiesAsync = async (
   cities: string[], 
-  preferences?: UserPreferences | null
+  preferences?: UserPreferences | null,
+  customHotels?: any[],
+  flightInfo?: any
 ): Promise<TripPlan | null> => {
   if (!cities || !Array.isArray(cities) || cities.length === 0) return null;
 
@@ -735,8 +737,44 @@ export const createTripPlanFromCitiesAsync = async (
   const days: any[] = cityCoordsList.map((item, index) => {
     const prevLoc = index === 0 ? originName : cityCoordsList[index - 1].name;
     const isSameAsPrev = prevLoc.toLowerCase().trim() === item.name.toLowerCase().trim();
-    const transportMode = index === 0 && isSameAsPrev ? 'Walk' : (index % 2 === 0 ? 'Train' : 'Flight');
+    const transportMode = flightInfo ? 'Flight' : (index === 0 && isSameAsPrev ? 'Walk' : (index % 2 === 0 ? 'Train' : 'Flight'));
     
+    // Asignar hotel personalizado enriquecido si existe
+    const assignedHotel = customHotels && customHotels.length > 0
+      ? customHotels[index % customHotels.length]
+      : null;
+
+    const accommodationData = assignedHotel ? {
+      type: 'Hotel' as const,
+      name: assignedHotel.name,
+      location: item.name,
+      rating: assignedHotel.rating,
+      pricePerNight: assignedHotel.pricePerNight,
+      totalPrice: assignedHotel.totalPrice,
+      bookingUrl: assignedHotel.bookingUrl,
+      notes: `Valoración: ⭐ ${assignedHotel.rating}/10 (${assignedHotel.pricePerNight ? assignedHotel.pricePerNight + '€/noche' : ''})`,
+      coordinates: assignedHotel.coordinates ? {
+        lat: assignedHotel.coordinates.lat,
+        lng: assignedHotel.coordinates.lng
+      } : {
+        lat: Number((item.coords.lat + 0.004).toFixed(5)),
+        lng: Number((item.coords.lng + 0.004).toFixed(5))
+      }
+    } : {
+      type: 'Hotel' as const,
+      name: `Hotel recomendado en ${item.name}`,
+      location: item.name,
+      notes: `Ubicación recomendada en ${item.name}`,
+      coordinates: {
+        lat: Number((item.coords.lat + 0.004).toFixed(5)),
+        lng: Number((item.coords.lng + 0.004).toFixed(5))
+      }
+    };
+
+    const flightNotes = flightInfo?.departureDate 
+      ? `Vuelo ${flightInfo.airline || ''} (${flightInfo.departureDate}) - ${flightInfo.price ? flightInfo.price + '€' : ''}`
+      : `Trayecto entre ${prevLoc} y ${item.name}`;
+
     return {
       dayNumber: index + 1,
       location: item.name,
@@ -744,23 +782,14 @@ export const createTripPlanFromCitiesAsync = async (
       theme: `Visita y exploración de ${item.name}`,
       transport: isSameAsPrev ? [] : [{
         mode: transportMode,
-        provider: transportMode === 'Train' ? 'Renfe / Eurostar' : transportMode === 'Flight' ? 'Vuelo directo' : 'FlixBus',
-        from: prevLoc,
-        to: item.name,
-        duration: 'Trayecto recomendado',
+        provider: flightInfo?.airline || (transportMode === 'Train' ? 'Renfe / Eurostar' : transportMode === 'Flight' ? 'Vuelo directo' : 'FlixBus'),
+        from: flightInfo?.origin || prevLoc,
+        to: flightInfo?.destination || item.name,
+        duration: flightInfo?.durationHours || 'Trayecto recomendado',
         requiresReservation: true,
-        notes: `Trayecto entre ${prevLoc} y ${item.name}`
+        notes: flightNotes
       }],
-      accommodation: {
-        type: 'Hotel',
-        name: `Hotel recomendado en ${item.name}`,
-        location: item.name,
-        notes: `Ubicación recomendada en ${item.name}`,
-        coordinates: {
-          lat: Number((item.coords.lat + 0.004).toFixed(5)),
-          lng: Number((item.coords.lng + 0.004).toFixed(5))
-        }
-      },
+      accommodation: accommodationData,
       pois: [
         {
           name: `Centro histórico de ${item.name}`,
