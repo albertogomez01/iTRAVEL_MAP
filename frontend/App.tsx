@@ -632,7 +632,7 @@ export default function App() {
   const selectedOption = tripPlan?.options?.find(o => o.id === selectedOptionId) || tripPlan?.options?.[0] || null;
 
   return (
-    <div className="relative h-screen w-full bg-slate-950 text-slate-100 font-sans select-none flex flex-col overflow-hidden">
+    <div className="relative h-screen w-full bg-slate-950 text-slate-100 font-sans flex flex-col overflow-hidden">
       
       {/* FLOATING AI THINKING INDICATOR */}
       {(isLoading || isUpdatingItinerary) && (
@@ -914,8 +914,8 @@ export default function App() {
               
               {/* TAB 1: COPILOT CHAT STREAM + INTEGRATED INPUT */}
               {isChatOpen && (
-                <div className="flex-1 flex flex-col h-full overflow-hidden p-3 sm:p-4">
-                  <div className="flex-1 overflow-y-auto pr-1">
+                <div className="flex-1 flex flex-col h-full overflow-hidden p-3 sm:p-4 select-text">
+                  <div className="flex-1 overflow-y-auto pr-1 select-text">
                     {messages.map(msg => (
                       <ChatMessage key={msg.id} message={msg} />
                     ))}

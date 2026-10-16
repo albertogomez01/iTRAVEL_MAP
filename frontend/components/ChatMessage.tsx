@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { User, ExternalLink, AlertTriangle, Sparkles, CheckCheck, Train, Plane, Hotel, MapPin, Globe } from 'lucide-react';
+import { User, ExternalLink, AlertTriangle, Sparkles, CheckCheck, Train, Plane, Hotel, MapPin, Globe, Copy, Check } from 'lucide-react';
 import { Message } from '../types';
 
 interface ChatMessageProps {
@@ -9,6 +9,17 @@ interface ChatMessageProps {
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const isModel = message.role === 'model';
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.text);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error("Error al copiar texto:", err);
+    }
+  };
 
   // Custom Markdown components tuned for sleek glassmorphism aesthetics
   const markdownComponents = {
@@ -119,19 +130,39 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             <span className="font-bold tracking-wide flex items-center gap-1 text-white font-heading">
               {isModel ? 'Copiloto iTRAVEL_MAP' : 'Tú'}
             </span>
-            <span className="text-[10px] opacity-65 font-medium">
-              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="p-1 px-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1 text-[10px] cursor-pointer"
+                title={isCopied ? "¡Copiado al portapapeles!" : "Copiar texto del mensaje"}
+              >
+                {isCopied ? (
+                  <>
+                    <Check size={12} className="text-emerald-400" />
+                    <span className="text-emerald-400 font-medium">Copiado</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={12} />
+                    <span className="opacity-80">Copiar</span>
+                  </>
+                )}
+              </button>
+              <span className="text-[10px] opacity-65 font-medium">
+                {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
           </div>
 
           {/* Message Content */}
           {message.isError ? (
-            <div className="text-rose-300 flex items-center gap-2 text-xs bg-rose-950/70 p-3 rounded-xl border border-rose-800/80">
+            <div className="text-rose-300 flex items-center gap-2 text-xs bg-rose-950/70 p-3 rounded-xl border border-rose-800/80 select-text cursor-text">
               <AlertTriangle size={15} className="shrink-0" />
               <span>{message.text}</span>
             </div>
           ) : (
-            <div className="prose prose-invert prose-xs max-w-none leading-relaxed text-slate-100">
+            <div className="prose prose-invert prose-xs max-w-none leading-relaxed text-slate-100 select-text cursor-text">
               <ReactMarkdown components={markdownComponents}>
                 {message.text}
               </ReactMarkdown>
