@@ -8,9 +8,9 @@ type LayerSelectorProps = {
 
 export const LayerSelector: React.FC<LayerSelectorProps> = ({ currentLayer, onChange }) => {
   const layers: Array<{ id: 'standard' | 'satellite' | 'terrain'; label: string }> = [
-    { id: 'standard', label: 'Night' },
-    { id: 'terrain', label: 'Urban' },
-    { id: 'satellite', label: 'Satellite' },
+    { id: 'standard', label: 'Mapa' },
+    { id: 'terrain', label: 'Relieve' },
+    { id: 'satellite', label: 'Satélite' },
   ];
 
   return (

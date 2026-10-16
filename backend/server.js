@@ -9,12 +9,15 @@ import express from 'express';
 import fetch from 'node-fetch';
 import rateLimit from 'express-rate-limit';
 import { WebSocketServer, WebSocket } from 'ws';
+import { GoogleAuth } from 'google-auth-library';
 
 const app = express();
 app.use(express.json({limit: process?.env?.API_PAYLOAD_MAX_SIZE || "7mb"}));
 
 const PORT = process?.env?.API_BACKEND_PORT || 5000;
 const API_BACKEND_HOST = process?.env?.API_BACKEND_HOST || "127.0.0.1";
+const GOOGLE_CLOUD_PROJECT = process.env.GOOGLE_CLOUD_PROJECT || 'key-perigee-406513';
+const GOOGLE_CLOUD_LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
 
 const PROXY_HEADER = process?.env?.PROXY_HEADER;
 if (!PROXY_HEADER) {
@@ -225,7 +228,7 @@ Recomienda itinerarios paso a paso con enlaces markdown explícitos [🏨 Hotel]
       parts: [{ text: message }]
     });
 
-    const candidateModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+    const candidateModels = ['gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-flash'];
     let lastErrorDetails = null;
     let lastStatusCode = 500;
 
@@ -284,6 +287,39 @@ Recomienda itinerarios paso a paso con enlaces markdown explícitos [🏨 Hotel]
       error: err.message || 'Internal Server Error',
       clientEmail: serviceAccountCreds.client_email
     });
+  }
+});
+
+// Endpoint compatible con el formato que recibía n8n ({ message, travelPreferences })
+app.post(['/api/agent', '/webhook/itravel-map-copilot'], async (req, res) => {
+  const message = req.body.message || req.body.prompt || '';
+  const preferences = req.body.travelPreferences || req.body.preferences || {};
+  req.body.message = message;
+  req.body.preferences = preferences;
+
+  try {
+    // Reutiliza la lógica de generación del chat
+    const chatEndpoint = `http://127.0.0.1:${PORT}/api/chat`;
+    const internalRes = await fetch(chatEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, preferences })
+    });
+
+    if (internalRes.ok) {
+      const data = await internalRes.json();
+      return res.json({
+        response: data.text,
+        output: data.text,
+        text: data.text,
+        model: data.model
+      });
+    }
+
+    const errData = await internalRes.text();
+    return res.status(internalRes.status).json({ error: errData });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'Agent endpoint error' });
   }
 });
 

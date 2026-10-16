@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Loader2, Link as LinkIcon, Menu, MessageSquare, Map as MapIcon, Calendar, ChevronDown, Bookmark, Sparkles, X, Share2, Check, Download, Wifi, WifiOff } from 'lucide-react';
+import { Send, Loader2, Link as LinkIcon, Menu, MessageSquare, Map as MapIcon, Calendar, ChevronDown, Bookmark, Sparkles, X, Share2, Check, Download, Wifi, WifiOff, Key } from 'lucide-react';
 import { Message, TripPlan, UserPreferences, MapTarget } from './types';
 import { initChat, sendMessageToAgent, extractItineraryState, enrichTripPlanCoordinatesAsync, isAdkConfigured, initAdkSession, streamAdkQuery } from './services/aiService';
 import { generateItineraryPDF } from './services/pdfService';
@@ -8,6 +8,7 @@ import { ItineraryView } from './components/ItineraryView';
 import { Sidebar, SavedTrip } from './components/Sidebar';
 import { MapView } from './components/MapView';
 import { LoginModal } from './components/LoginModal';
+import { ApiKeyModal } from './components/ApiKeyModal';
 import { OnboardingGuideModal } from './components/OnboardingGuideModal';
 import { LegalModal, LegalTab } from './components/LegalModal';
 import { AppSplashScreen } from './components/AppSplashScreen';
@@ -79,6 +80,7 @@ export default function App() {
   } : customUser;
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(!activeUser);
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalTab>('about');
@@ -768,6 +770,15 @@ export default function App() {
             <span className="hidden sm:inline">{isCopied ? '¡Copiado!' : 'Compartir'}</span>
           </button>
 
+          <button
+            onClick={() => setIsKeyModalOpen(true)}
+            className="p-2 sm:px-3 sm:py-1.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all border border-slate-800 bg-slate-900/90 text-amber-300 hover:text-amber-200 hover:bg-slate-800 shadow-sm cursor-pointer"
+            title="Configurar tu Gemini API Key"
+          >
+            <Key size={15} />
+            <span className="hidden sm:inline">API Key</span>
+          </button>
+
           {activeUser && (
             <div className="bg-slate-900 border border-slate-800 p-1 rounded-2xl hidden sm:flex items-center gap-1.5">
               {activeUser.photoURL ? (
@@ -940,7 +951,8 @@ export default function App() {
                       <button
                         onClick={handleSendMessage}
                         disabled={!inputValue.trim() || isLoading || !isInitialized}
-                        className="p-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-teal-900/40 shrink-0 active:scale-95"
+                        className="p-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-teal-900/40 shrink-0 active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+                        title={isLoading ? "El copiloto está respondiendo..." : inputValue.trim() ? "Enviar mensaje al Copiloto" : "Escribe tu destino o consulta para enviar"}
                       >
                         <Send size={16} />
                       </button>
@@ -1029,6 +1041,12 @@ export default function App() {
       <LoginModal 
         isOpen={isLoginModalOpen} 
         onLoginSuccess={handleLoginSuccess} 
+        onClose={() => setIsLoginModalOpen(false)}
+      />
+
+      <ApiKeyModal 
+        isOpen={isKeyModalOpen} 
+        onClose={() => setIsKeyModalOpen(false)} 
       />
 
       <OnboardingGuideModal 

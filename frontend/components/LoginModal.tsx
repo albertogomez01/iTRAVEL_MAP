@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Compass, Sparkles, User, Mail, ShieldCheck, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Compass, Sparkles, User, Mail, ShieldCheck, ArrowRight, CheckCircle2, X } from 'lucide-react';
 import { loginWithGoogle, isFirebaseConfigured } from '../services/firebase';
 import { ModalBase } from './ModalBase';
 
 interface LoginModalProps {
   onLoginSuccess: (userData: { displayName: string; email: string; photoURL?: string }) => void;
   isOpen: boolean;
+  onClose?: () => void;
 }
 
-export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isOpen }) => {
+export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isOpen, onClose }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -64,6 +65,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isOpen }
       {/* Main Login Card */}
       <div className="relative w-full max-w-md bg-slate-800/60 backdrop-blur-lg border border-slate-800 rounded-3xl p-5 sm:p-8 shadow-2xl text-white overflow-y-auto max-h-[92vh] z-10 glass-modal">
         
+        {/* Close Button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800/60 transition-colors cursor-pointer z-20"
+            title="Cerrar ventana"
+          >
+            <X size={20} />
+          </button>
+        )}
+
         {/* Top Header Badge */}
         <div className="flex flex-col items-center text-center mb-6">
           <img src="/logo.png" alt="iTRAVEL_MAP Logo" style={{ maxWidth: '64px', maxHeight: '64px' }} className="w-16 h-16 rounded-2xl object-cover animated-logo-glow mb-3 border-2 border-brand-400/50" />
@@ -156,10 +168,25 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isOpen }
 
           <button
             type="submit"
-            className="w-full mt-2 bg-gradient-to-r from-brand-600 to-teal-500 hover:from-brand-500 hover:to-teal-400 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-brand-600/30 transition-all active:scale-[0.98] text-sm"
+            className="w-full mt-2 bg-gradient-to-r from-brand-600 to-teal-500 hover:from-brand-500 hover:to-teal-400 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-brand-600/30 transition-all active:scale-[0.98] text-sm cursor-pointer"
           >
             <span>Empezar a Planificar</span>
             <ArrowRight size={16} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onLoginSuccess({
+                displayName: 'Viajero Invitado',
+                email: 'invitado@itravelmap.com',
+                photoURL: undefined
+              });
+              if (onClose) onClose();
+            }}
+            className="w-full mt-2 py-2.5 px-4 text-xs font-semibold text-slate-400 hover:text-white bg-slate-900/60 hover:bg-slate-800 rounded-xl transition-all border border-slate-800/80 text-center cursor-pointer"
+          >
+            Continuar como invitado (Explorar sin registrarse)
           </button>
         </form>
 

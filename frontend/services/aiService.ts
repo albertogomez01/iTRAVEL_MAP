@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, Chat, Modality } from '@google/genai';
 import { TripPlan, UserPreferences } from '../types';
+import { runTravelAgent } from './travelAgent';
 
 // ============================================================================
 // 1. STANDARD GEMINI API
@@ -35,10 +36,8 @@ export const initAiClient = (): GoogleGenAI => {
     throw new Error("No se ha configurado la API Key de Gemini. Añade VITE_GEMINI_API_KEY en tu .env o configura tu clave en la app.");
   }
   
-  // Las claves de Google AI Studio empiezan por AIzaSy... (vertexai: false)
-  // Las claves de Vertex AI / GCP empiezan por AQ... u otras (vertexai: true)
-  const isVertex = !apiKey.startsWith('AIza');
-  ai = new GoogleGenAI({ apiKey, vertexai: isVertex });
+  // Usar directamente el cliente GoogleGenAI estándar con la clave proporcionada
+  ai = new GoogleGenAI({ apiKey });
   return ai;
 };
 
@@ -48,10 +47,8 @@ try {
   console.warn("Inicialización inicial de GoogleGenAI pospuesta hasta que se configure la API Key.");
 }
 
-const MODEL_NAME = 'gemini-2.0-flash';
+const MODEL_NAME = 'gemini-3.5-flash';
 let chatSession: Chat | null = null;
-
-
 
 const SYSTEM_INSTRUCTION = `
 Eres iTRAVEL_MAP, el copilot y planificador experto inteligente integrado en la plataforma iTRAVEL_MAP.
@@ -80,21 +77,24 @@ Reglas de Interacción y Formato Visual:
   - Para transportes usa enlaces como: https://www.thetrainline.com, https://www.omio.es, https://www.skyscanner.es, https://www.flixbus.es.
 - **Diseño Visual**: Usa emojis explicativos (🏨, 🚆, ✈️, 🚌, 📍, 💶, 💡), listas estructuradas con viñetas, precios estimados en € y resaltados en negrita.
 - **Tono**: Profesional, motivador, muy estructurado y conciso.
+- **Sincronización con el Mapa Interactivo**: Siempre que recomiendes un itinerario o nombres ciudades a visitar en orden, añade obligatoriamente al final de tu respuesta en una línea separada un bloque JSON con las ciudades en orden de visita:
+{"cities": ["Ciudad1", "Ciudad2", ...]}
 `;
 
 const CANDIDATE_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.5-pro',
-  'gemini-1.5-flash'
+  'gemini-3.5-flash',
+  'gemini-flash-latest',
+  'gemini-3.8-flash',
+  'gemini-2.5-flash'
 ];
 
 let activeModelIndex = 0;
 let lastPreferences: UserPreferences | null = null;
 
-const CACHE_VERSION = 'cache_v1';
+const CACHE_VERSION = 'cache_v2';
 
-// In-memory & LocalStorage Caches to minimize Gemini API calls & GCP costs
-const chatResponseCache = new Map<string, { text: string; groundingChunks?: any[] }>();
+// In-memory & LocalStorage Caches to minimize Gemini API calls
+const chatResponseCache = new Map<string, { text: string; tripPlan?: TripPlan; cities?: string[]; groundingChunks?: any[] }>();
 const itineraryStateCache = new Map<string, TripPlan>();
 
 const getCacheKey = (prompt: string, prefs?: UserPreferences | null): string => {
@@ -116,136 +116,173 @@ export const initChat = (preferences: UserPreferences) => {
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
           temperature: 0.7,
-          maxOutputTokens: 1500,
+          maxOutputTokens: 2000,
         },
       });
     }
   } catch (e) {
-    console.log("Chat configurado para usar Backend Service Account (/api/chat)");
+    console.log("Chat configurado para usar motor Copiloto con fallback automático.");
   }
 };
 
 export const sendMessageToAgent = async (message: string, overridePreferences?: UserPreferences | null) => {
   const preferences = overridePreferences || lastPreferences;
+  const cacheKey = getCacheKey(message, preferences);
+  if (chatResponseCache.has(cacheKey)) {
+    console.log("⚡ Respuesta de chat servida desde la caché");
+    return chatResponseCache.get(cacheKey)!;
+  }
 
+  // --------------------------------------------------------------------------
+  // 1. AGENTE NATIVO INTELIGENTE DE VIAJES (Function Calling: Clima, Rutas, Reservas)
+  // --------------------------------------------------------------------------
   try {
-    const apiRes = await fetch('https://alb001.app.n8n.cloud/webhook/itravel-map-copilot', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        message: message,
-        travelPreferences: preferences
-      })
-    });
-
-    // 1. Verificar primero que la respuesta del fetch sea OK (apiRes.ok)
-    if (!apiRes.ok) {
-      const errorText = await apiRes.text();
-      console.error(`[n8n Webhook Error ${apiRes.status}]:`, errorText);
-      return {
-        text: `⚠️ **Error en n8n Webhook (HTTP ${apiRes.status})**: ${apiRes.statusText}`,
-        groundingChunks: []
+    const agentResult = await runTravelAgent(message, preferences);
+    if (agentResult && agentResult.text) {
+      const result = {
+        text: agentResult.text,
+        tripPlan: agentResult.tripPlan,
+        cities: agentResult.cities,
+        groundingChunks: agentResult.groundingChunks || []
       };
+      chatResponseCache.set(cacheKey, result);
+      return result;
+    }
+  } catch (agentErr: any) {
+    console.warn("[Agente de Viajes nativo]: Fallback a motor estándar:", agentErr?.message || agentErr);
+  }
+
+  // --------------------------------------------------------------------------
+  // 2. MOTOR DE RESPALDO: Gemini AI Studio (Direct Chat Session)
+  // --------------------------------------------------------------------------
+  try {
+    if (!ai) {
+      try {
+        ai = initAiClient();
+      } catch (e) {}
     }
 
-    // 2. Leer texto plano antes de JSON.parse() para evitar "Unexpected end of JSON input" si viene vacío
-    const rawText = await apiRes.text();
-    if (!rawText || !rawText.trim()) {
-      return {
-        text: "El servicio no devolvió una respuesta válida.",
-        groundingChunks: []
-      };
-    }
+    if (ai) {
+      let rawText = '';
+      let groundingChunks: any[] = [];
 
-    let data: any;
-    try {
-      data = JSON.parse(rawText);
-    } catch (parseErr) {
-      if (typeof rawText === 'string' && rawText.trim().length > 0) {
-        return {
-          text: rawText.trim(),
-          groundingChunks: []
-        };
-      }
-      return {
-        text: "El servicio no devolvió una respuesta válida.",
-        groundingChunks: []
-      };
-    }
+      const originStr = preferences?.originLocation ? `\n- Origen del viaje: ${preferences.originLocation}` : '';
+      const datesStr = preferences?.startDate && preferences?.endDate ? `\n- Fechas: Del ${preferences.startDate} al ${preferences.endDate}` : '';
+      const passengersStr = `\n- Viajeros: ${preferences?.passengers || 1}`;
+      const budgetStr = `\n- Presupuesto máx: ${preferences?.maxBudget || 1500}€ / persona`;
+      const prefContext = `\n[Contexto del viaje:${originStr}${datesStr}${passengersStr}${budgetStr}\n- Ritmo: ${preferences?.pace || 'Moderado'}]`;
 
-    // 3. Extraer la propiedad "response" o "output"
-    let responseText = '';
-    if (typeof data === 'string') {
-      responseText = data;
-    } else if (Array.isArray(data) && data.length > 0) {
-      const item = data[0];
-      if (typeof item === 'string') {
-        responseText = item;
-      } else if (item && typeof item === 'object') {
-        responseText = item.response || item.output || '';
-      }
-    } else if (data && typeof data === 'object') {
-      responseText = data.response || data.output || '';
-    }
+      const promptWithContext = `${prefContext}\n\nMensaje del usuario: ${message}`;
 
-    // A) Extraer array de ciudades si viene en data.cities o data[0].cities
-    let extractedCities: string[] = [];
-    if (Array.isArray(data?.cities)) {
-      extractedCities = data.cities;
-    } else if (Array.isArray(data) && Array.isArray(data[0]?.cities)) {
-      extractedCities = data[0].cities;
-    }
-
-    // B) Buscar si el bloque JSON {"cities": [...]} está al final o dentro del texto de respuesta
-    if (extractedCities.length === 0 && typeof responseText === 'string') {
-      const citiesJsonRegex = /(?:```(?:json)?\s*)?\{\s*"cities"\s*:\s*\[([\s\S]*?)\]\s*\}(?:\s*```)?/i;
-      const match = responseText.match(citiesJsonRegex);
-      if (match) {
+      for (let i = 0; i < CANDIDATE_MODELS.length; i++) {
+        const model = CANDIDATE_MODELS[i];
         try {
-          const jsonStr = match[0].replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-          const parsed = JSON.parse(jsonStr);
-          if (Array.isArray(parsed?.cities)) {
-            extractedCities = parsed.cities;
+          if (!chatSession) {
+            chatSession = ai.chats.create({
+              model,
+              config: {
+                systemInstruction: SYSTEM_INSTRUCTION,
+                temperature: 0.7,
+                maxOutputTokens: 2000,
+              },
+            });
           }
-        } catch (e) {
-          console.warn("No se pudo parsear el bloque de ciudades del texto:", e);
+
+          const response = await chatSession.sendMessage({ message: promptWithContext });
+          rawText = response.text || '';
+          const candidate = response.candidates?.[0];
+          groundingChunks = candidate?.groundingMetadata?.groundingChunks || [];
+
+          if (rawText && rawText.trim()) {
+            activeModelIndex = i;
+            break;
+          }
+        } catch (modelErr: any) {
+          console.warn(`Error con modelo Gemini ${model}:`, modelErr?.message || modelErr);
+          // Si el modelo está ocupado o no disponible, reiniciamos sesión para probar el siguiente
+          chatSession = null;
         }
       }
+
+      if (rawText && rawText.trim()) {
+        let extractedCities: string[] = [];
+        const citiesJsonRegex = /(?:```(?:json)?\s*)?\{\s*"cities"\s*:\s*\[([\s\S]*?)\]\s*\}(?:\s*```)?/i;
+        const match = rawText.match(citiesJsonRegex);
+        if (match) {
+          try {
+            const jsonStr = match[0].replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+            const parsed = JSON.parse(jsonStr);
+            if (Array.isArray(parsed?.cities)) {
+              extractedCities = parsed.cities;
+            }
+          } catch (e) {
+            console.warn("No se pudo parsear el bloque de ciudades del texto:", e);
+          }
+        }
+
+        const cleanedText = rawText.replace(/(?:```(?:json)?\s*)?\{\s*"cities"\s*:\s*\[[\s\S]*?\]\s*\}(?:\s*```)?/gi, '').trim();
+
+        let returnedTripPlan: TripPlan | undefined;
+        if (extractedCities.length > 0) {
+          returnedTripPlan = (await createTripPlanFromCitiesAsync(extractedCities, preferences)) || undefined;
+        }
+
+        const result = {
+          text: cleanedText,
+          tripPlan: returnedTripPlan,
+          cities: extractedCities,
+          groundingChunks
+        };
+        chatResponseCache.set(cacheKey, result);
+        return result;
+      }
     }
+  } catch (geminiError: any) {
+    console.error("Error en Gemini Client:", geminiError);
+  }
 
-    // C) LIMPIAR el texto para que NO muestre el bloque {"cities": [...]} al usuario en el chat
-    if (typeof responseText === 'string') {
-      responseText = responseText
-        .replace(/(?:```(?:json)?\s*)?\{\s*"cities"\s*:\s*\[[\s\S]*?\]\s*\}(?:\s*```)?/gi, '')
-        .trim();
+  // --------------------------------------------------------------------------
+  // 3. FALLBACK: Backend Service Account (/api/chat)
+  // --------------------------------------------------------------------------
+  try {
+    const apiRes = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        preferences
+      })
+    });
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      if (data && data.text) {
+        return {
+          text: data.text,
+          tripPlan: undefined,
+          cities: [],
+          groundingChunks: data.groundingChunks || []
+        };
+      }
     }
+  } catch (backendErr) {
+    console.warn("Backend /api/chat no disponible:", backendErr);
+  }
 
-    // Si el JSON devuelto no tiene la propiedad response ni output, mostrar mensaje amigable
-    if (!responseText || typeof responseText !== 'string' || !responseText.trim()) {
-      responseText = "El servicio no devolvió una respuesta válida.";
-    }
-
-    let returnedTripPlan = data.tripPlan || data.itinerary || (data.options ? { origin: preferences?.originLocation || 'Por definir', options: data.options } : undefined);
-
-    if (!returnedTripPlan && extractedCities.length > 0) {
-      returnedTripPlan = await createTripPlanFromCitiesAsync(extractedCities, preferences);
-    }
-
+  // --------------------------------------------------------------------------
+  // 4. SI NO HAY API KEY O NINGÚN SERVICIO RESPONDE
+  // --------------------------------------------------------------------------
+  const hasKey = !!getApiKey();
+  if (!hasKey) {
     return {
-      text: responseText,
-      tripPlan: returnedTripPlan,
-      cities: extractedCities,
-      groundingChunks: []
-    };
-  } catch (error: any) {
-    console.error("Error conectando con el Webhook de n8n:", error);
-    return {
-      text: `⚠️ **Error de conexión con n8n**: ${error?.message || error}`,
+      text: `⚠️ **Configuración requerida**: Para usar el Copiloto de iTRAVEL_MAP, necesitas una clave API gratuita de Google Gemini.\n\n1. Consigue tu clave gratis en [Google AI Studio](https://aistudio.google.com/app/apikey).\n2. Abre el menú lateral ☰ o el icono de la llave 🔑 en la barra superior y pulsa en **"Configurar Gemini API Key"** para guardarla.`,
       groundingChunks: []
     };
   }
+
+  return {
+    text: `⚠️ No se pudo obtener una respuesta en este momento. Por favor, inténtalo de nuevo en unos segundos.`,
+    groundingChunks: []
+  };
 };
 
 // Schema for the Orchestrator to extract structured data

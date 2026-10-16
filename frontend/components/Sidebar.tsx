@@ -5,6 +5,7 @@ import { CityAutocompleteInput } from './CityAutocompleteInput';
 
 import { loginWithGoogle, logoutUser } from '../services/firebase';
 import { getApiKey, setCustomApiKey } from '../services/aiService';
+import { ApiKeyModal } from './ApiKeyModal';
 
 export interface SavedTrip {
   id: string;
@@ -448,6 +449,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
         )}
+
+        {/* Modal Configurar Gemini API Key */}
+        <ApiKeyModal 
+          isOpen={showKeyModal} 
+          onClose={() => setShowKeyModal(false)} 
+        />
 
       </div>
     </>

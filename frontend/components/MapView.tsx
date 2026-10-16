@@ -410,8 +410,8 @@ export const MapView: React.FC<MapViewProps> = ({
   const getTileUrl = (layer: string) => {
     switch (layer) {
       case 'satellite': return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-      case 'terrain': return 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
-      default: return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+      case 'terrain': return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
+      default: return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
     }
   };
 
