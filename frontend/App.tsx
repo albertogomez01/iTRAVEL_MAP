@@ -389,7 +389,7 @@ export default function App() {
         
         updateItineraryState([...messages, userMsg, { id: modelMsgId, role: 'model', text: fullText }]);
       } else {
-        const response = await sendMessageToAgent(userMsg.text);
+        const response = await sendMessageToAgent(userMsg.text, preferences, messages);
         const modelMsg: Message = {
           id: (Date.now() + 1).toString(),
           role: 'model',

@@ -57,13 +57,17 @@ const routeCalculatorToolDeclaration: FunctionDeclaration = {
 
 const bookingLinksToolDeclaration: FunctionDeclaration = {
   name: 'generateBookingLinks',
-  description: 'Genera enlaces directos y oficiales a Booking.com, Skyscanner, Omio, Renfe/TheTrainline y FlixBus para las ciudades del itinerario.',
+  description: 'Genera enlaces directos y oficiales a Google Flights, Skyscanner, Booking.com, Omio, Renfe/TheTrainline y FlixBus para las ciudades del itinerario.',
   parameters: {
     type: Type.OBJECT,
     properties: {
       city: {
         type: Type.STRING,
         description: 'Ciudad para la cual generar los enlaces de alojamiento o transporte.'
+      },
+      originCity: {
+        type: Type.STRING,
+        description: 'Ciudad de origen opcional para generar enlaces directos de vuelos origen-destino.'
       },
       serviceType: {
         type: Type.STRING,
@@ -260,20 +264,26 @@ const executeRouteTransport = async (args: { originCity: string; destinationCity
   }
 };
 
-const executeBookingLinks = (args: { city: string; serviceType?: string }) => {
+const executeBookingLinks = (args: { city: string; originCity?: string; serviceType?: string }) => {
   const city = args.city;
-  const encoded = encodeURIComponent(city);
+  const origin = args.originCity || '';
+  const encodedDest = encodeURIComponent(city);
+  const encodedOrigin = encodeURIComponent(origin);
+  const flightQuery = origin ? `Vuelos+de+${encodedOrigin}+a+${encodedDest}` : `Vuelos+a+${encodedDest}`;
+  const omioQuery = origin ? `https://www.omio.es/search-frontend/results?departure=${encodedOrigin}&arrival=${encodedDest}` : 'https://www.omio.es';
+
   return {
     city,
     hotels: [
-      { name: `🏨 Hoteles en ${city} en Booking.com`, url: `https://www.booking.com/searchresults.es.html?ss=${encoded}` },
-      { name: `🏡 Apartamentos y Alojamientos en ${city} (Airbnb)`, url: `https://www.airbnb.es/s/${encoded}/homes` }
+      { name: `🏨 Hoteles en ${city} en Booking.com`, url: `https://www.booking.com/searchresults.es.html?ss=${encodedDest}` },
+      { name: `🏡 Apartamentos y Alojamientos en ${city} (Airbnb)`, url: `https://www.airbnb.es/s/${encodedDest}/homes` }
     ],
     transports: [
-      { name: `🚆 Trenes y Autobuses a ${city} en Omio`, url: `https://www.omio.es` },
-      { name: `✈️ Vuelos baratos a ${city} en Skyscanner`, url: `https://www.skyscanner.es` },
+      { name: `✈️ Ver vuelos directos y horarios en Google Flights`, url: `https://www.google.com/travel/flights?q=${flightQuery}` },
+      { name: `✈️ Comparador de vuelos Skyscanner (${origin ? origin + ' a ' : ''}${city})`, url: `https://www.skyscanner.es` },
+      { name: `🚆 Trenes y Autobuses en Omio`, url: omioQuery },
       { name: `🚄 Billetes de Tren en TheTrainline`, url: `https://www.thetrainline.com/es` },
-      { name: `🚌 Autobuses FlixBus a ${city}`, url: `https://www.flixbus.es` }
+      { name: `🚌 Autobuses FlixBus`, url: `https://www.flixbus.es` }
     ]
   };
 };
@@ -311,25 +321,56 @@ export const runTravelAgent = async (
 
   const originStr = preferences?.originLocation ? `\n- Origen: ${preferences.originLocation}` : '';
   const datesStr = preferences?.startDate && preferences?.endDate ? `\n- Fechas: Del ${preferences.startDate} al ${preferences.endDate}` : '';
-  const passengersStr = `\n- Viajeros: ${preferences?.passengers || 1}`;
-  const budgetStr = `\n- Presupuesto Máximo por persona: ${preferences?.maxBudget || 1500}€`;
-  const paceStr = `\n- Ritmo: ${preferences?.pace || 'Moderado'}`;
-  const nightTrainsStr = `\n- Preferencia trenes nocturnos: ${preferences?.preferNightTrains ? 'Sí' : 'No'}`;
+  const passengersStr = preferences?.passengers && preferences.passengers > 1 ? `\n- Viajeros: ${preferences.passengers}` : '';
+  const budgetStr = preferences?.maxBudget ? `\n- Presupuesto Máximo por persona: ${preferences.maxBudget}€` : '';
+  const paceStr = preferences?.pace ? `\n- Ritmo: ${preferences.pace}` : '';
+  const nightTrainsStr = preferences?.preferNightTrains ? `\n- Preferencia trenes nocturnos: Sí` : '';
+
+  // Sanitizar y estructurar el historial para que alterne estrictamente user / model
+  const formattedHistory: { role: string; parts: { text: string }[] }[] = [];
+  let lastRole: string | null = null;
+
+  for (const item of (history || [])) {
+    if (!item.text || !item.text.trim()) continue;
+    // Omitir el saludo inicial genérico de bienvenida del copiloto
+    if (item.text.includes('¡Hola! Soy tu Copiloto iTRAVEL_MAP')) continue;
+
+    const role = (item.role === 'model' || item.role === 'assistant') ? 'model' : 'user';
+    if (role === lastRole && formattedHistory.length > 0) {
+      formattedHistory[formattedHistory.length - 1].parts[0].text += `\n\n${item.text}`;
+    } else {
+      formattedHistory.push({
+        role,
+        parts: [{ text: item.text }]
+      });
+      lastRole = role;
+    }
+  }
+
+  // Gemini exige que el historial termine con 'model' para que el nuevo mensaje enviado sea 'user'
+  while (formattedHistory.length > 0 && formattedHistory[formattedHistory.length - 1].role === 'user') {
+    formattedHistory.pop();
+  }
+
+  const isFollowUp = formattedHistory.length > 0;
 
   const agentSystemInstruction = `
 Eres el AGENTE INTELIGENTE AUTÓNOMO DE VIAJES iTRAVEL_MAP.
-Tu función es planificar viajes increíbles, asesorar al usuario con datos reales y generar itinerarios multimodales sincronizados con el mapa interactivo.
+Tu función es planificar viajes increíbles, asesorar al usuario con datos reales, horarios y precios, y generar itinerarios multimodales sincronizados con el mapa interactivo.
 
 DISPONES DE HERRAMIENTAS REALES PARA EJECUTAR:
-1. 'getWeatherForecast': Consulta el clima real antes de recomendar ropa, actividades al aire libre o museos.
+1. 'getWeatherForecast': Consulta el clima real antes de recomendar ropa o actividades.
 2. 'calculateRouteTransport': Calcula distancias exactas y opciones óptimas de tren, bus y avión.
-3. 'generateBookingLinks': Proporciona enlaces directos a Booking.com, Skyscanner, Omio y TheTrainline.
+3. 'generateBookingLinks': Proporciona enlaces directos a Google Flights, Skyscanner, Booking.com, Omio y TheTrainline.
 
 REGLAS DE ACTUACIÓN:
 - Idioma: Español de España (es-ES).
 - Tono: Experto, motivador, muy organizado y visual (usa negritas, listas y emojis 🏨, 🚆, ✈️, 🌤️, 📍).
-- Utiliza tus herramientas cuando el usuario pregunte por clima, distancias, rutas o recomendaciones de transporte.
-- Enlaces markdown: Pon siempre enlaces funcionales en el formato [🏨 Booking](url) o [🚆 Omio/Tren](url).
+- **CONTINUIDAD CONVERSACIONAL TOTAL (MEMORIA CRÍTICA)**:
+  - Lee SIEMPRE el historial de mensajes anteriores de la conversación.
+  - Recuerda en todo momento el origen, destino, fechas, número de personas y condiciones ya acordadas (por ejemplo: si el usuario ya dijo "de Alicante a Londres para 2 estudiantes 4 días", JAMÁS vuelvas a preguntar "¿desde qué ciudad deseas salir?", "¿a dónde quieres ir?", "¿cuántos sois?" o "¿en qué fechas?").
+  - Si el usuario dice "búscame los vuelos más baratos con las condiciones dadas", analiza directamente los vuelos para la ruta, fechas y viajeros establecidos previamente, proporcionando combinaciones de aerolíneas reales (ej. Ryanair, easyJet, Vueling), horarios recomendados (ida temprano, vuelta tarde) y enlaces de reserva.
+- Enlaces markdown: Pon siempre enlaces funcionales en el formato [✈️ Google Flights](url), [✈️ Skyscanner](url) o [🏨 Booking](url).
 - **SINCRONIZACIÓN CON EL MAPA**: Al final de tu respuesta, si recomiendas un viaje o mencionas una ruta de ciudades en orden de visita, añade OBLIGATORIAMENTE en la última línea el bloque JSON:
 {"cities": ["Ciudad1", "Ciudad2", ...]}
 `;
@@ -342,6 +383,7 @@ REGLAS DE ACTUACIÓN:
     try {
       const chat = ai.chats.create({
         model,
+        history: formattedHistory,
         config: {
           systemInstruction: agentSystemInstruction,
           tools: agentTools,
@@ -350,10 +392,14 @@ REGLAS DE ACTUACIÓN:
         }
       });
 
-      // Contexto enriquecido para la primera llamada del usuario
-      const initialPrompt = `[PREFERENCIAS DEL VIAJERO:${originStr}${datesStr}${passengersStr}${budgetStr}${paceStr}${nightTrainsStr}]\n\nCONSULTA DEL USUARIO: ${userMessage}`;
-      
-      let currentResponse = await chat.sendMessage({ message: initialPrompt });
+      // Si es un mensaje de seguimiento, enviamos directamente la consulta para mantener el hilo fluido
+      const promptToSend = isFollowUp
+        ? userMessage
+        : (originStr || datesStr || budgetStr)
+          ? `[PREFERENCIAS INICIALES:${originStr}${datesStr}${passengersStr}${budgetStr}${paceStr}${nightTrainsStr}]\n\nCONSULTA DEL USUARIO: ${userMessage}`
+          : userMessage;
+
+      let currentResponse = await chat.sendMessage({ message: promptToSend });
 
       // Bucle de ejecución de herramientas (hasta 3 rondas)
       let turnCount = 0;

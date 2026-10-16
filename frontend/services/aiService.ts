@@ -97,10 +97,10 @@ const CACHE_VERSION = 'cache_v2';
 const chatResponseCache = new Map<string, { text: string; tripPlan?: TripPlan; cities?: string[]; groundingChunks?: any[] }>();
 const itineraryStateCache = new Map<string, TripPlan>();
 
-const getCacheKey = (prompt: string, prefs?: UserPreferences | null): string => {
+const getCacheKey = (prompt: string, prefs?: UserPreferences | null, historyLen: number = 0): string => {
   const normPrompt = prompt.trim().toLowerCase();
   const prefStr = prefs ? `${prefs.originLocation}_${prefs.maxBudget}_${prefs.passengers}_${prefs.tripType}_${prefs.pace}` : '';
-  return `${CACHE_VERSION}___${normPrompt}___${prefStr}`;
+  return `${CACHE_VERSION}___${normPrompt}___${prefStr}___h${historyLen}`;
 };
 
 export const initChat = (preferences: UserPreferences) => {
@@ -125,9 +125,14 @@ export const initChat = (preferences: UserPreferences) => {
   }
 };
 
-export const sendMessageToAgent = async (message: string, overridePreferences?: UserPreferences | null) => {
+export const sendMessageToAgent = async (
+  message: string, 
+  overridePreferences?: UserPreferences | null,
+  history?: { role: string; text: string }[]
+) => {
   const preferences = overridePreferences || lastPreferences;
-  const cacheKey = getCacheKey(message, preferences);
+  const historyLen = history?.length || 0;
+  const cacheKey = getCacheKey(message, preferences, historyLen);
   if (chatResponseCache.has(cacheKey)) {
     console.log("⚡ Respuesta de chat servida desde la caché");
     return chatResponseCache.get(cacheKey)!;
@@ -137,7 +142,7 @@ export const sendMessageToAgent = async (message: string, overridePreferences?: 
   // 1. AGENTE NATIVO INTELIGENTE DE VIAJES (Function Calling: Clima, Rutas, Reservas)
   // --------------------------------------------------------------------------
   try {
-    const agentResult = await runTravelAgent(message, preferences);
+    const agentResult = await runTravelAgent(message, preferences, history);
     if (agentResult && agentResult.text) {
       const result = {
         text: agentResult.text,
@@ -153,7 +158,7 @@ export const sendMessageToAgent = async (message: string, overridePreferences?: 
   }
 
   // --------------------------------------------------------------------------
-  // 2. MOTOR DE RESPALDO: Gemini AI Studio (Direct Chat Session)
+  // 2. MOTOR DE RESPALDO: Gemini AI Studio (Direct Chat Session con Historial)
   // --------------------------------------------------------------------------
   try {
     if (!ai) {
@@ -166,29 +171,47 @@ export const sendMessageToAgent = async (message: string, overridePreferences?: 
       let rawText = '';
       let groundingChunks: any[] = [];
 
-      const originStr = preferences?.originLocation ? `\n- Origen del viaje: ${preferences.originLocation}` : '';
-      const datesStr = preferences?.startDate && preferences?.endDate ? `\n- Fechas: Del ${preferences.startDate} al ${preferences.endDate}` : '';
-      const passengersStr = `\n- Viajeros: ${preferences?.passengers || 1}`;
-      const budgetStr = `\n- Presupuesto máx: ${preferences?.maxBudget || 1500}€ / persona`;
-      const prefContext = `\n[Contexto del viaje:${originStr}${datesStr}${passengersStr}${budgetStr}\n- Ritmo: ${preferences?.pace || 'Moderado'}]`;
+      // Sanitizar historial para fallback
+      const formattedHistory: { role: string; parts: { text: string }[] }[] = [];
+      let lastRole: string | null = null;
+      for (const item of (history || [])) {
+        if (!item.text || !item.text.trim()) continue;
+        if (item.text.includes('¡Hola! Soy tu Copiloto iTRAVEL_MAP')) continue;
+        const role = (item.role === 'model' || item.role === 'assistant') ? 'model' : 'user';
+        if (role === lastRole && formattedHistory.length > 0) {
+          formattedHistory[formattedHistory.length - 1].parts[0].text += `\n\n${item.text}`;
+        } else {
+          formattedHistory.push({ role, parts: [{ text: item.text }] });
+          lastRole = role;
+        }
+      }
+      while (formattedHistory.length > 0 && formattedHistory[formattedHistory.length - 1].role === 'user') {
+        formattedHistory.pop();
+      }
 
-      const promptWithContext = `${prefContext}\n\nMensaje del usuario: ${message}`;
+      const isFollowUp = formattedHistory.length > 0;
+      const originStr = preferences?.originLocation ? `\n- Origen: ${preferences.originLocation}` : '';
+      const datesStr = preferences?.startDate && preferences?.endDate ? `\n- Fechas: Del ${preferences.startDate} al ${preferences.endDate}` : '';
+      const passengersStr = preferences?.passengers && preferences.passengers > 1 ? `\n- Viajeros: ${preferences.passengers}` : '';
+      const budgetStr = preferences?.maxBudget ? `\n- Presupuesto máx: ${preferences.maxBudget}€ / persona` : '';
+      const prefContext = `\n[Contexto:${originStr}${datesStr}${passengersStr}${budgetStr}\n- Ritmo: ${preferences?.pace || 'Moderado'}]`;
+
+      const promptToSend = isFollowUp ? message : `${prefContext}\n\nMensaje: ${message}`;
 
       for (let i = 0; i < CANDIDATE_MODELS.length; i++) {
         const model = CANDIDATE_MODELS[i];
         try {
-          if (!chatSession) {
-            chatSession = ai.chats.create({
-              model,
-              config: {
-                systemInstruction: SYSTEM_INSTRUCTION,
-                temperature: 0.7,
-                maxOutputTokens: 2000,
-              },
-            });
-          }
+          const session = ai.chats.create({
+            model,
+            history: formattedHistory,
+            config: {
+              systemInstruction: SYSTEM_INSTRUCTION + '\nREGLA DE CONTINUIDAD: Recuerda SIEMPRE el origen, destino, fechas, número de personas y acuerdos anteriores del chat. No vuelvas a pedir datos ya establecidos.',
+              temperature: 0.7,
+              maxOutputTokens: 2000,
+            },
+          });
 
-          const response = await chatSession.sendMessage({ message: promptWithContext });
+          const response = await session.sendMessage({ message: promptToSend });
           rawText = response.text || '';
           const candidate = response.candidates?.[0];
           groundingChunks = candidate?.groundingMetadata?.groundingChunks || [];
@@ -199,8 +222,6 @@ export const sendMessageToAgent = async (message: string, overridePreferences?: 
           }
         } catch (modelErr: any) {
           console.warn(`Error con modelo Gemini ${model}:`, modelErr?.message || modelErr);
-          // Si el modelo está ocupado o no disponible, reiniciamos sesión para probar el siguiente
-          chatSession = null;
         }
       }
 
@@ -250,7 +271,8 @@ export const sendMessageToAgent = async (message: string, overridePreferences?: 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message,
-        preferences
+        preferences,
+        history
       })
     });
     if (apiRes.ok) {

@@ -303,7 +303,7 @@ app.post(['/api/agent', '/webhook/itravel-map-copilot'], async (req, res) => {
     const internalRes = await fetch(chatEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, preferences })
+      body: JSON.stringify({ message, preferences, history: req.body.history })
     });
 
     if (internalRes.ok) {
